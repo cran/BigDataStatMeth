@@ -5,15 +5,14 @@ library(BiocStyle)
 
 options(tinytex.verbose = TRUE)
 
-knitr::opts_chunk$set(collapse = TRUE, comment = "", cache=FALSE, message = FALSE, width = 180)
+knitr::opts_chunk$set(collapse = TRUE, comment = "", cache=FALSE, message = FALSE, width = 180, crop = NULL)
 
 ## ----install_required, eval=FALSE---------------------------------------------
 #  # Install BiocManager (if not previously installed)
 #  install.packages("BiocManager")
 #  
 #  # Install required packages
-#  BiocManager::install(c("Matrix", "RcppEigen", "RSpectra",
-#                         "beachmat", "DelayedArray",
+#  BiocManager::install(c("Matrix", "RcppEigen", "RSpectra", "DelayedArray",
 #                         "HDF5Array", "rhdf5"))
 
 ## ---- install, eval=FALSE-----------------------------------------------------
@@ -49,41 +48,26 @@ p <- 10000
 Abig <- matrix(rnorm(n*n), nrow=n, ncol=n)
 Bbig <- matrix(rnorm(n*p), nrow=n, ncol=p)
 
-## ----getDelayed---------------------------------------------------------------
-DA <- DelayedArray(A)
-DB <- DelayedArray(B)
-
 ## ----blockmult----------------------------------------------------------------
 # Use 10x10 blocks
 AxB <- bdblockmult(A, B, block_size = 10)
 
-# Use 256x256 blocks
-AxBDelay <- bdblockmult(DA, DB, block_size = 256 )
-
 ## ----check_equal_x------------------------------------------------------------
-all.equal(AxBDelay,A%*%B)
-all.equal(AxB, AxBDelay)
+all.equal(AxB, A%*%B)
 
 ## ----blockmultparal-----------------------------------------------------------
 AxB <- bdblockmult(A, B, block_size = 10, paral = TRUE)
-AxBDelay <- bdblockmult(DA, DB, block_size = 10, paral = TRUE )
-AxBDelayT <- bdblockmult(DA, DB, block_size = 10, paral = TRUE, threads =  3 )
 
-all.equal(AxBDelay,A%*%B)
-all.equal(AxB, AxBDelay)
-all.equal(AxBDelay, AxBDelayT)
+all.equal(AxB,A%*%B)
 
 ## ----blockmultbm1-------------------------------------------------------------
-DAbig <- DelayedArray(Abig)
-DBbig <- DelayedArray(Abig)
-
 # We want to force it to run in memory
 AxBNOBig <- bdblockmult(Abig, Bbig, onmemory = TRUE) 
 
 # Run matrix multiplication with data on memory using submatrices of 256x256
-AxBBig3000 <- bdblockmult(DAbig, DBbig, block_size = 256 , onmemory = TRUE)
+AxBBig3000 <- bdblockmult(Abig, Bbig, block_size = 256 , onmemory = TRUE)
 
-## ----bench2, cache=TRUE-------------------------------------------------------
+## ----bench2, cache=FALSE------------------------------------------------------
 bench1 <- microbenchmark( 
   # Parallel block size = 128
   Paral128Mem = bdblockmult(Abig, Bbig, paral = TRUE), 
@@ -123,7 +107,7 @@ f <- x_sparse%*%y_sparse
 all.equal(d,f)
 
 
-## ----bench3, cache=TRUE-------------------------------------------------------
+## ----bench3, cache=FALSE------------------------------------------------------
 res <- microbenchmark( 
   sparse_mult = bdblockmult_sparse(x_sparse, y_sparse),
   matrix_mult = bdblockmult(as.matrix(x_sparse), as.matrix(y_sparse)), 
@@ -139,24 +123,19 @@ ggplot2::autoplot(res)
 n <- 500
 m <- 250
 A <- matrix(rnorm(n*m), nrow=n, ncol=m)
-DA <- DelayedArray(A)
 
 # Cross Product of a standard R matrix
 cpA <- bdCrossprod(A)
-# Result with DelayedArray data type
-cpDA <- bdCrossprod(DA)
 
 ## ----check_cp-----------------------------------------------------------------
-all.equal(cpDA, crossprod(A))
+all.equal(cpA, crossprod(A))
 
 ## ----nocrossprod--------------------------------------------------------------
 # Transposed Cross Product R matrices
 tcpA <- bdtCrossprod(A)
-# With DelayeArray data types
-tcpDA <- bdtCrossprod(DA)
 
 ## ----check_tcp----------------------------------------------------------------
-all.equal(tcpDA, tcrossprod(A))
+all.equal(tcpA, tcrossprod(A))
 
 ## ----benchmark_bdcrossprod----------------------------------------------------
 res <- microbenchmark(
@@ -175,25 +154,21 @@ n <- 250
 X <- matrix(rnorm(n*n), nrow=n, ncol=n)
 u <- runif(n)
 w <- u * (1 - u)
-DX <- DelayedArray(X)
-Dw <- DelayedArray(as.matrix(w))
 
 wcpX <- bdwproduct(X, w,"xwxt")
-wcpDX <- bdwproduct(DX, Dw,"xwxt") # with DelayedArray
 
-wcpDX[1:5,1:5]
+wcpX[1:5,1:5]
 
 ## ----check_wcp----------------------------------------------------------------
-all.equal( wcpDX, X%*%diag(w)%*%t(X) )
+all.equal( wcpX, X%*%diag(w)%*%t(X) )
 
 ## ----wtcrossprod--------------------------------------------------------------
 wtcpX <- bdwproduct(X, w,"xtwx")
-wtcpDX <- bdwproduct(DX, Dw,"xtwx") # with DelayedArray
 
-wtcpDX[1:5,1:5]
+wtcpX[1:5,1:5]
 
 ## ----check_wtcp---------------------------------------------------------------
-all.equal(wtcpDX, t(X)%*%diag(w)%*%X)
+all.equal(wtcpX, t(X)%*%diag(w)%*%X)
 
 ## ----invChols-----------------------------------------------------------------
 # Generate a positive definite matrix
@@ -211,19 +186,16 @@ Posdef <- function (n, ev = runif(n, 0, 10))
 }
 
 A <- Posdef(n = 500, ev = 1:500)
-DA <- DelayedArray(A)
 
 invchol <- bdInvCholesky(A)
-Dinvchol <- bdInvCholesky(DA)
 
 round(invchol[1:5,1:5],8)
 
 ## ----invCholsequal------------------------------------------------------------
-all.equal(Dinvchol, solve(A))
+all.equal(invchol, solve(A))
 
 ## ----benchmark_invChol--------------------------------------------------------
 res <- microbenchmark(invchol = bdInvCholesky(A),
-                      invcholDelayedA = bdInvCholesky(DA),
                       invcholR = solve(A),
                       times = 3)
 res
@@ -243,11 +215,8 @@ zapsmall(pseudoinv)[1:5,1:5]
 
 ## ----QRdecomp-----------------------------------------------------------------
 
-# Get Delayed array from A
-DA <- DelayedArray(A)
 
 QR_A <- bdQR(A)
-QR_DA <- bdQR(DA)
 QR_R <- qr(A)
 
 # Show results for Q
@@ -291,12 +260,9 @@ all.equal(B, testB)
 set.seed(413)
 n <- 500
 A <- matrix(rnorm(n*n), nrow=n, ncol=n)
-# Get a Delayed Array object
-DA <- DelayedArray(A)
 
 # SVD
 bsvd <- bdSVD(A)
-Dbsvd <- bdSVD(DA)
 
 # Singular values, and right and left singular vectors
 bsvd$d[1:5]
@@ -305,11 +271,9 @@ bsvd$v[1:5,1:5]
 
 ## ----check_svd----------------------------------------------------------------
 all.equal( sqrt( svd( tcrossprod( scale(A) ) )$d[1:10] ), bsvd$d[1:10] )
-all.equal( sqrt( svd( tcrossprod( scale(A) ) )$d[1:10] ), Dbsvd$d[1:10] )
 
 ## ----svd_nonorm---------------------------------------------------------------
 bsvd <- bdSVD(A, bcenter = FALSE, bscale = FALSE)
-Dbsvd <- bdSVD(DA, bcenter = FALSE, bscale = FALSE)
 
 
 bsvd$d[1:5]
@@ -317,7 +281,6 @@ bsvd$u[1:5,1:5]
 bsvd$v[1:5,1:5]
 
 all.equal( sqrt(svd(tcrossprod(A))$d[1:10]), bsvd$d[1:10] )
-all.equal( sqrt(svd(tcrossprod(A))$d[1:10]), Dbsvd$d[1:10] )
 
 
 ## ----mirNA--------------------------------------------------------------------
@@ -341,10 +304,8 @@ points(pc$x[, 1], pc$x[, 2], col = cancer,
 legend("topright", levels(cancer), pch=16, col=1:3)
 
 ## ----cia_da-------------------------------------------------------------------
-miRNAD <- DelayedArray(miRNA)
-miRNAD.c <- DelayedArray::sweep(miRNAD, 2,
-      DelayedArray::colMeans(miRNAD), "-")
-svd.da <- bdSVD(miRNAD.c, bcenter = FALSE, bscale = FALSE)
+miRNA.c <- sweep(miRNA, 2, colMeans(miRNA), "-")
+svd.da <- bdSVD(miRNA.c, bcenter = FALSE, bscale = FALSE)
 
 ## ----plot_svd_da--------------------------------------------------------------
 plot(svd.da$u[, 1], svd.da$u[, 2],

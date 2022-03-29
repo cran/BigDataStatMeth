@@ -105,10 +105,11 @@ Eigen::MatrixXd Bblock_weighted_tcrossprod_parallel(const Eigen::MatrixXd& A, Ei
   }
   else    ithreads = std::thread::hardware_concurrency()/2; //omp_get_max_threads();
 
-  omp_set_dynamic(0);   // omp_set_dynamic(0); omp_set_num_threads(4);
-  omp_set_num_threads(ithreads);
+  //.OpenMP.//  omp_set_dynamic(0);   // omp_set_dynamic(0); omp_set_num_threads(4);
+  //.OpenMP.//  omp_set_num_threads(ithreads);
   
-#pragma omp parallel shared(A, B, C, chunk) private(ii, jj, kk, tid ) 
+//.OpenMP.// #pragma omp parallel shared(A, B, C, chunk) private(ii, jj, kk, tid ) 
+#pragma omp parallel num_threads(getDTthreads(ithreads, true)) shared(A, B, C, chunk) private(ii, jj, kk, tid ) 
 {
 
   tid = omp_get_thread_num();
@@ -144,10 +145,11 @@ Eigen::MatrixXd Bblock_weighted_tcrossprod_parallel(const Eigen::MatrixXd& A, Ei
   C.resize(B.rows(),A.rows());
   C = Eigen::MatrixXd::Zero(B.rows(),A.rows()) ;
   
-  omp_set_dynamic(0);   
-  omp_set_num_threads(ithreads);
+  //.OpenMP.//  omp_set_dynamic(0);   
+  //.OpenMP.//  omp_set_num_threads(ithreads);
 
-#pragma omp parallel shared(A, B, C, chunk) private(ii, jj, kk, tid ) 
+//.OpenMP.// #pragma omp parallel shared(A, B, C, chunk) private(ii, jj, kk, tid ) 
+#pragma omp parallel num_threads(getDTthreads(ithreads, true)) shared(A, B, C, chunk) private(ii, jj, kk, tid ) 
 {
   
   tid = omp_get_thread_num();
@@ -189,19 +191,12 @@ return(C);
 //' @return Matrix with A%*%W%*%t(A) product 
 //' @examples
 //' 
-//' library(DelayedArray)
-//' 
 //' # with numeric matrix
 //' m <- 500
 //' k <- 1500
 //' n <- 400
 //' A <- matrix(rnorm(n*k), nrow=n, ncol=k)
 //' B <- matrix(rnorm(n*k), nrow=k, ncol=n)
-//' 
-//' 
-//' # with Delaeyd Array
-//' AD <- DelayedArray(A)
-//' BD <- DelayedArray(B)
 //' 
 //' # Serial execution
 //' Serie<- bdtCrossprod_Weighted(A, B, paral = FALSE)

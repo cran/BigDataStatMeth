@@ -98,9 +98,10 @@ Eigen::MatrixXd Xwd_parallel(const Eigen::MatrixXd& X, const Eigen::VectorXd& w,
   }
   else    ithreads = std::thread::hardware_concurrency() / 2; //omp_get_max_threads();
   
-  omp_set_num_threads(ithreads);
+  //.OpenMP.//omp_set_num_threads(ithreads);
 
-#pragma omp parallel shared(X, w, C) 
+  //.OpenMP.//#pragma omp parallel shared(X, w, C) 
+#pragma omp parallel num_threads(getDTthreads(ithreads, true)) shared(X, w, C) 
 {
 #pragma omp for schedule (dynamic)
   for (int i=0; i<n; i++)
@@ -128,9 +129,10 @@ Eigen::MatrixXd wdX_parallel(const Eigen::MatrixXd& X, const Eigen::VectorXd& w,
   }
   else    ithreads = std::thread::hardware_concurrency() /2; //omp_get_max_threads();
   
-  omp_set_num_threads(ithreads);
+  //.OpenMP.// omp_set_num_threads(ithreads);
   
-#pragma omp parallel shared(X, w, C) 
+  //.OpenMP.//#pragma omp parallel shared(X, w, C) 
+#pragma omp parallel num_threads(getDTthreads(ithreads, true)) shared(X, w, C) 
 {
 #pragma omp for schedule (dynamic)
   for (int i=0; i<n; i++)
@@ -140,64 +142,6 @@ Eigen::MatrixXd wdX_parallel(const Eigen::MatrixXd& X, const Eigen::VectorXd& w,
 }
   return(C);
 }
-
-
-
-// //' Crossproduct and transposed crossproduct of DelayedArray
-// //'
-// //' This function performs a crossproduct or transposed crossproduct of numerical or DelayedArray matrix.
-// //'
-// //' @param a numerical or Delayed Array matrix
-// //' @param transposed (optional, default = false) boolean indicating if we have to perform a crossproduct (transposed=false) or transposed crossproduct (transposed = true)
-// //' @return numerical matrix with crossproduct or transposed crossproduct
-// //' @examples
-// //'
-// //' library(DelayedArray)
-// //'
-// //' n <- 100
-// //' p <- 60
-// //'
-// //' X <- matrix(rnorm(n*p), nrow=n, ncol=p)
-// //'
-// //' # without DelayedArray
-// //' bdcrossprod(X)
-// //' bdcrossprod(X, transposed = TRUE)
-// //'
-// //' # with DelayedArray
-// //' XD <- DelayedArray(X)
-// //' bdcrossprod(XD)
-// //' bdcrossprod(XD, transposed = TRUE)
-// //'
-// //' @export
-// // [[Rcpp::export]]
-// Eigen::MatrixXd bdcrossprod(Rcpp::RObject a, Rcpp::Nullable<Rcpp::Function> transposed = R_NilValue)
-// {
-// 
-//   Eigen::MatrixXd A;
-//   bool btrans;
-// 
-//   if(transposed.isNotNull())
-//     btrans = Rcpp::as<bool> (transposed);
-//   else
-//     btrans = FALSE;
-// 
-//   // Read DelayedArray's a and b
-//   if ( a.isS4() == true)
-//   {
-//     A = read_DelayedArray(a);
-//   } else {
-//     try{
-//       A = Rcpp::as<Eigen::Map<Eigen::MatrixXd> >(a);
-//     }
-//     catch(std::exception &ex) { }
-//   }
-// 
-//   if(btrans == true) {
-//     return(bdtcrossproduct(A)) ;
-//   }else {
-//     return(bdcrossproduct(A));
-//   }
-// }
 
 
 
@@ -330,8 +274,6 @@ Eigen::MatrixXd bdCrossprod_generic( Rcpp::RObject A, Rcpp::Nullable<Rcpp::RObje
 //' @return numerical matrix 
 //' @examples
 //' 
-//' library(DelayedArray)
-//' 
 //' n <- 100
 //' p <- 60
 //' 
@@ -341,11 +283,6 @@ Eigen::MatrixXd bdCrossprod_generic( Rcpp::RObject A, Rcpp::Nullable<Rcpp::RObje
 //' w <- u * (1 - u)
 //' ans <- bdwproduct(X, w,"xtwx")
 //' 
-//' # with Delayed Array
-//' 
-//' DX <- DelayedArray(X)
-//' 
-//' ans <- bdwproduct(DX, w,"xtwx")
 //' 
 //' @export
 // [[Rcpp::export]]
@@ -399,8 +336,6 @@ Eigen::MatrixXd bdwproduct(Rcpp::RObject X, Rcpp::RObject w, std::string op)
 //' @return numerical matrix 
 //' @examples
 //' 
-//' library(DelayedArray)
-//' 
 //' n <- 100
 //' p <- 60
 //' 
@@ -409,13 +344,6 @@ Eigen::MatrixXd bdwproduct(Rcpp::RObject X, Rcpp::RObject w, std::string op)
 //' 
 //' bdScalarwproduct(X, w,"Xw")
 //' bdScalarwproduct(X, w,"wX")
-//' 
-//' # with Delayed Array
-//' 
-//' DX <- DelayedArray(X)
-//' 
-//' bdScalarwproduct(DX, w,"Xw")
-//' bdScalarwproduct(DX, w,"wX")
 //' 
 //' @export
 // [[Rcpp::export]]

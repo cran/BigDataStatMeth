@@ -28,8 +28,15 @@ getQRbyBlocks <- function(strdataset, file, mblocks, center, scale, bcols, overw
     # Prepare data - Normalize data (only Center)
     bdNormalize_hdf5(filename = file, 
                      group = strgroup, dataset = strdataset, 
-                     bcenter = center, bscale = scale) 
-    
+                     bcenter = center, bscale = scale, force = overwrt) 
+
+    # Review m size block must be equal than number of samples
+    # if( bdgetDim_hdf5(file, paste0(strgroup, "/",strdataset))[1] / mblocks <  bdgetDim_hdf5(file, paste0(strgroup, "/",strdataset))[2] ) {
+    #     mblocks <- floor( bdgetDim_hdf5(file, paste0(strgroup, "/",strdataset))[1] / bdgetDim_hdf5(file, paste0(strgroup, "/",strdataset))[2]) - 1
+    #     if(mblocks <= 0) mblocks = 1
+    #     message("m set to ", mblocks)
+    # }
+
     # Step 1
     # Split datasets X abd Y by rows and store data to data file
     bdSplit_matrix_hdf5( filename = file, 
@@ -47,12 +54,16 @@ getQRbyBlocks <- function(strdataset, file, mblocks, center, scale, bcols, overw
                            func = "QR", 
                            force = overwrt )
     
+    # stop("Reviewing")
+    
     # Step 3
     blocks.qr <- bdgetDatasetsList_hdf5(file, paste0( "Step2/", strdataset, "rows"))
     bdBind_hdf5(filename = file, group =  paste0( "Step2/", strdataset, "rows"), 
                 datasets = blocks.qr[which(blocks.qr %like% ".R")],
                 outgroup = "Step3/merged", outdataset =  paste0( strdataset, "Rt"), 
                 func = "bindRows", force = overwrt )
+    
+    # stop("Reviewing")
     bdapply_Function_hdf5( file, "Step3/merged", paste0( strdataset, "Rt"), "Step3/Final_QR", "QR", force = overwrt )
     
     # Step 4
@@ -159,24 +170,19 @@ writeCCAComponents_hdf5 <- function(filename, ncolsX, ncolsY)
 #' @param bycols, Boolean by default = true, true indicates that the imputation will be done by columns, otherwise, the imputation will be done by rows.
 #' @param overwriteResults, Boolean, if true, datasets existing inside a file must be overwritten if we are using the same names.
 #' @param keepInteResults, Boolean, if false, intermediate results will be removed.
+#' @param threads (optional) only used in some operations inside function. If threads is null then threads =  maximum number of threads available - 1.
+#' @param k (optional) number of local SVDs to concatenate at each level 
+#' @param q (optional) number of levels
 #' @return hdf5 data file with CCA results, 
 #' @examples
 #'    print ("Example in vignette")
 #' 
-bdCCA_hdf5 <- function(filename, X, Y, m = 10, bcenter = TRUE, bscale = FALSE, bycols = FALSE, overwriteResults = FALSE, keepInteResults = FALSE)
+bdCCA_hdf5 <- function(filename, X, Y, m = 10, bcenter = TRUE, bscale = FALSE, bycols = FALSE, overwriteResults = FALSE, keepInteResults = FALSE, threads = 1, k = 4, q = 1)
 {
     
-    # if(file.exists(filename)){
-    #     if(overwritefile == FALSE ){
-    #         stop("File already exists, please set overwrite = TRUE if you want to remove previous file")
-    #     } else {
-    #         message("File will be overwritten")
-    #     }
-    # } 
 
     matrices <- c(X, Y)
     sapply( matrices, getQRbyBlocks, file = filename, mblocks = m, center = bcenter, scale = bscale, bcols = bycols, overwrt = overwriteResults )
-    
     
     # Step 7
     #   tQXQY <- crossprod(t(QX), QY)[1:ncol(x), ]
@@ -184,13 +190,15 @@ bdCCA_hdf5 <- function(filename, X, Y, m = 10, bcenter = TRUE, bscale = FALSE, b
                             group = "Step6", A = "XQ",
                             groupB = "Step6", B = "YQ", 
                             outgroup = "Step7")
+    
     # Step 8 : 
     # z <- svd( tQXQY )
     res <- bdSVD_hdf5(file = filename, 
                       group = "Step7", dataset = "CrossProd_XQxYQ",
-                      bcenter = FALSE, bscale = FALSE, k = 16, q = 2, threads = 3)
+                      bcenter = FALSE, bscale = FALSE, k = k, q = q, threads = threads)
     
     res <- sapply( matrices, bdgetDim_hdf5, filename = filename )
+    
     writeCCAComponents_hdf5( filename, res[2,X], res[2,Y])
     
     if( keepInteResults == FALSE){
@@ -199,7 +207,6 @@ bdCCA_hdf5 <- function(filename, X, Y, m = 10, bcenter = TRUE, bscale = FALSE, b
             print(paste0 ("Step",x, "Removed"))
         })
     }
-    
     
 }
 

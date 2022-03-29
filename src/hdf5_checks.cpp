@@ -3,8 +3,8 @@
 bool exist_FileGroupDataset(std::string filename, std::string group, std::string dataset)
 {
   
-  H5File* file;
-  DataSet* pdataset = nullptr;
+  H5File* file = nullptr;
+  // DataSet* pdataset = nullptr;
   
   try {
     

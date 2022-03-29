@@ -96,7 +96,7 @@ void bdSplit_matrix_hdf5( std::string filename, std::string group, std::string d
                                  Rcpp::Nullable<bool> bycols = true, Rcpp::Nullable<bool> force = false  )
 {
   
-  H5File* file;
+  H5File* file = nullptr;
   DataSet* pdataset = nullptr;
   
   try
@@ -104,7 +104,7 @@ void bdSplit_matrix_hdf5( std::string filename, std::string group, std::string d
     std::string strdataset = group + "/" + dataset;
     std::string stroutgroup, stroutdataset, stroutdata;
     std::string strdatasetout;
-    int iblocksize = 0, iwholesize = 0;
+    int iblocksize = 0; //, iwholesize = 0;
     bool bcols, bforce;
     
     

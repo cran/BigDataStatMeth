@@ -2,7 +2,7 @@
 library(knitr)
 library(BiocStyle)
 
-knitr::opts_chunk$set(collapse = TRUE, comment = "", cache = TRUE, message = FALSE, width = 180)
+knitr::opts_chunk$set(collapse = TRUE, comment = "", cache = FALSE, message = FALSE, width = 180, crop = NULL)
 
 ## ---- cleanup, echo=FALSE, include=FALSE--------------------------------------
 if( isTRUE(file.exists('delayed.hdf5'))) {
@@ -24,8 +24,7 @@ if( isTRUE(file.exists('tmp_blockmult.hdf5'))){
 #  
 #  # Install required packages
 #  BiocManager::install(c("Matrix", "RcppEigen", "RSpectra",
-#                         "beachmat", "DelayedArray",
-#                         "HDF5Array", "rhdf5"))
+#                         "DelayedArray", "HDF5Array", "rhdf5"))
 
 ## ---- install, eval=FALSE-----------------------------------------------------
 #  # Install devtools and load library (if not previously installed)
@@ -57,7 +56,7 @@ bdCreate_hdf5_matrix_file(filename = "robject.hdf5",
                           dataset = "A")
 
 ## ----ls-----------------------------------------------------------------------
-dir()
+list.files()
 
 ## ----hdf5AddDataset-----------------------------------------------------------
 set.seed(5234)
@@ -330,8 +329,8 @@ knitr::include_graphics("imgs/blocksvd.png")
 ## ----BlockSVDNorm-------------------------------------------------------------
 # Create dataframe data with 'odata' matrix in delayed hdf5 file at OMIC group
 set.seed(5234)
-n <- 150000
-m <- 50
+n <- 100
+m <- 150000
 odata <- matrix(rnorm(n*m, mean=0, sd=1), n,m)
 
 bdAdd_hdf5_matrix(odata, "delayed.hdf5", "OMICS", "data")
@@ -356,7 +355,9 @@ svd$d[1:7]
 ## ----BlockSVDNotNorm----------------------------------------------------------
 # Direct from hdf5 data file
 svdh5 <- bdSVD_hdf5("delayed.hdf5", "OMICS", "data", 
-                    bcenter = FALSE, bscale = FALSE)
+                    bcenter = FALSE, bscale = FALSE,
+                     k = 2, q = 1)
+
 
 # get results svd (d)
 test <- H5Fopen("delayed.hdf5")
@@ -372,7 +373,8 @@ svd$d[1:7]
 
 ## ----BlockSVDk4---------------------------------------------------------------
 # Block decomposition with 1 level and 4 local SVDs at each level
-svdh5 <- bdSVD_hdf5("delayed.hdf5", "OMICS", "data", q=1, k=4)
+svdh5 <- bdSVD_hdf5(file = "delayed.hdf5", group = "OMICS", dataset = "data",
+                    threads = 2)
 
 # get results svd (d)
 fprova <- H5Fopen("delayed.hdf5")

@@ -1,12 +1,12 @@
 #include "include/hdf5_blockmultSparse.h"
 
 
-//' Block matrix multiplication with Delayed Array Object
+//' Block matrix multiplication
 //' 
-//' This function performs a block matrix-matrix multiplication with numeric matrix or Delayed Arrays
+//' This function performs a block matrix-matrix multiplication with numeric matrix
 //' 
 //' @param filename string file name where dataset to normalize is stored
-//' @param group string or Delayed Array Matrix
+//' @param group string Matrix
 //' @param A, string with dataset name where matrix is stored
 //' @param B, string with dataset name where matrix is stored
 //' @param outgroup string with de group name under the matrix will be stored
@@ -61,9 +61,9 @@ Rcpp::RObject bdblockmult_sparse_hdf5(std::string filename, const std::string gr
    
    IntegerVector dsizeA, dsizeB;
    
-   H5File* file;
-   DataSet* dsA; 
-   DataSet* dsB;
+   H5File* file = nullptr;
+   DataSet* dsA = nullptr; 
+   DataSet* dsB = nullptr;
    
    
    
@@ -120,7 +120,9 @@ Rcpp::RObject bdblockmult_sparse_hdf5(std::string filename, const std::string gr
          B.resize(0,0); }
       
       dsA->close();
+      delete(dsA);
       dsB->close();
+      delete(dsB);
       
       
       Eigen::SparseMatrix<double> C_sp(dsizeA[0], dsizeB[1]);
@@ -128,11 +130,11 @@ Rcpp::RObject bdblockmult_sparse_hdf5(std::string filename, const std::string gr
       if(bsparseA || bsparseB) 
       {
          
-         if(!bsparseA){
+         if(!bsparseA) {
             Rcpp::Rcout<<"Matrix A isn't a sparse matrix";
          } 
          
-         if(!bsparseB){
+         if(!bsparseB) {
             Rcpp::Rcout<<"Matrix B isn't a sparse matrix";
          }
          
@@ -146,24 +148,30 @@ Rcpp::RObject bdblockmult_sparse_hdf5(std::string filename, const std::string gr
          
          Rf_error("No sparse matrix found");
          file->close();
+         delete(file);
          return(wrap(-1));
       }
       
       
       file->close();
+      delete(file);
       return(wrap(C_sp));
       
    } catch( FileIException& error ) { // catch failure caused by the H5File operations
       file->close();
+       delete(file);
       ::Rf_error( "c++ exception bdblockmult_sparse_hdf5 (File IException)" );
       return wrap(-1);
    } catch( DataSetIException& error ) { // catch failure caused by the DataSet operations
       file->close();
+       delete(file);
       ::Rf_error( "c++ exception bdblockmult_sparse_hdf5 (DataSet IException)" );
       return wrap(-1);   
    } catch(std::exception &ex) {
-      Rcpp::Rcout<< ex.what();
-      return wrap(-1);
+       file->close();
+       delete(file);
+       Rcpp::Rcout<< ex.what();
+       return wrap(-1);
    }
    
    

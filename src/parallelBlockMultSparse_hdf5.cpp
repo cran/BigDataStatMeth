@@ -33,11 +33,12 @@ Eigen::SparseMatrix<double> matmult_sparse_parallel ( Eigen::Map<Eigen::SparseMa
   // Columns x thread
   iblocks = N / ithreads;
   
-  omp_set_dynamic(0);   // omp_set_dynamic(0); omp_set_num_threads(4);
-  omp_set_num_threads(ithreads);
+  //.OpenMP.// omp_set_dynamic(0);   // omp_set_dynamic(0); omp_set_num_threads(4);
+  //.OpenMP.// omp_set_num_threads(ithreads);
  
  
-#pragma omp parallel shared( A, B, C) private(ii, tid) 
+ //.OpenMP.//#pragma omp parallel shared( A, B, C) private(ii, tid) 
+#pragma omp parallel num_threads(getDTthreads(ithreads, true)) shared( A, B, C) private(ii, tid) 
 {
   
   // tid = omp_get_thread_num();
@@ -94,9 +95,9 @@ Eigen::SparseMatrix<double> matmult_sparse( Eigen::Map<Eigen::SparseMatrix<doubl
 
 
 
-//' Block matrix multiplication with Delayed Array Object
+//' Block matrix multiplication 
 //' 
-//' This function performs a block matrix-matrix multiplication with numeric matrix or Delayed Arrays
+//' This function performs a block matrix-matrix multiplication with numeric matrix
 //' 
 //' @param A a sparse double matrix.
 //' @param B a sparse double matrix.

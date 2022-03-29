@@ -1,11 +1,20 @@
 Package: BigDataStatMeth
 Type: Package
 Title: Statistical Methods and Algorithms for Big Data
-Version: 0.99.14
-Authors@R: c(person("Dolors", "Pelegri-Siso", ,"dolors.pelegri@isglobal.org", 
-                     role=c("aut", "cre")),
-             person("Juan R.", "Gonzalez", ,"juanr.gonzalez@isglobal.org", 
-                     role=c("aut")))
+Version: 0.99.32
+Authors@R: 
+    c(
+        person( given = "Dolors", 
+                family = "Pelegri-Siso", 
+                email = "dolors.pelegri@isglobal.org", 
+                role=c("aut", "cre"),
+                comment = c(ORCID = "0000-0002-5993-3003")),
+        person( given = "Juan R.", 
+                family = "Gonzalez", 
+                email = "juanr.gonzalez@isglobal.org", 
+                role = c("aut"), 
+                comment = c(ORCID = "0000-0003-3267-2146"))
+        )
 Description: Basic Algebra methods using parallel 
     algorithms to be used in big data problems such as omics data analyses. 
     The functions will consider as input an HDF5 data file, an object of
@@ -23,9 +32,10 @@ Encoding: UTF-8
 VignetteBuilder: knitr
 RoxygenNote: 7.1.2
 NeedsCompilation: yes
-Packaged: 2021-12-16 17:38:11 UTC; mailos
-Author: Dolors Pelegri-Siso [aut, cre],
-  Juan R. Gonzalez [aut]
+Packaged: 2022-03-28 12:32:08 UTC; dpelegri
+Author: Dolors Pelegri-Siso [aut, cre]
+    (<https://orcid.org/0000-0002-5993-3003>),
+  Juan R. Gonzalez [aut] (<https://orcid.org/0000-0003-3267-2146>)
 Maintainer: Dolors Pelegri-Siso <dolors.pelegri@isglobal.org>
 Repository: CRAN
-Date/Publication: 2021-12-17 10:32:06 UTC
+Date/Publication: 2022-03-29 22:00:07 UTC

@@ -17,3 +17,17 @@ none
 \description{
 get dataset dimensions
 }
+\examples{
+
+matA <- matrix(c(1,2,3,4,5,6,7,8,9,10,11,12,13,14,15), nrow = 3, byrow = TRUE)
+
+bdCreate_hdf5_matrix_file("BasicMatVect.hdf5", matA, "INPUT", "matA")
+bdgetDim_hdf5("BasicMatVect.hdf5", "INPUT/matA")
+
+# Remove file (used as example)
+  if (file.exists("BasicMatVect.hdf5")) {
+    # Delete file if it exist
+    file.remove("BasicMatVect.hdf5")
+  }
+  
+}
