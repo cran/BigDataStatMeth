@@ -2,32 +2,28 @@
 % Please edit documentation in R/RcppExports.R
 \name{bdScalarwproduct}
 \alias{bdScalarwproduct}
-\title{Matrix - Weighted Scalar Multiplication with numerical or DelayedArray data}
+\title{Matrix–scalar weighted product}
 \usage{
-bdScalarwproduct(A, w, op)
+bdScalarwproduct(A, w)
 }
 \arguments{
-\item{A}{numerical or Delayed Array matrix}
+\item{A}{Numeric matrix (or object convertible to a dense numeric matrix).}
 
-\item{w}{scalar, weight}
-
-\item{op}{string indicating if operation  "Xw" or "wX"}
+\item{w}{Numeric scalar weight.}
 }
 \value{
-numerical matrix
+A numeric matrix with the same dimensions as \code{A}.
 }
 \description{
-This function performs a weighted product of a matrix(X) with a weighted diagonal matrix (w)
+Multiplies a numeric matrix \code{A} by a scalar weight \code{w},
+returning \eqn{w * A}. The input must be a base R numeric matrix (or
+convertible to one).
 }
 \examples{
-
-n <- 100
-p <- 60
-
-X <- matrix(rnorm(n*p), nrow=n, ncol=p)
+set.seed(1234)
+n <- 5; p <- 3
+X <- matrix(rnorm(n * p), n, p)
 w <- 0.75
-
-bdScalarwproduct(X, w,"Xw")
-bdScalarwproduct(X, w,"wX")
+bdScalarwproduct(X, w)
 
 }

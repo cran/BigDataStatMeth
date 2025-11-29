@@ -1,7 +1,9 @@
 Package: BigDataStatMeth
 Type: Package
-Title: Statistical Methods and Algorithms for Big Data
-Version: 0.99.32
+Title: Tools and Infrastructure for Developing 'Scalable' 'HDF5'-Based
+        Methods
+Version: 1.0.2
+Date: 2025-11-28
 Authors@R: 
     c(
         person( given = "Dolors", 
@@ -15,27 +17,31 @@ Authors@R:
                 role = c("aut"), 
                 comment = c(ORCID = "0000-0003-3267-2146"))
         )
-Description: Basic Algebra methods using parallel 
-    algorithms to be used in big data problems such as omics data analyses. 
-    The functions will consider as input an HDF5 data file, an object of
-    class DelayedArray or an R object.
+Description: A framework for 'scalable' statistical computing on large on-disk 
+    matrices stored in 'HDF5' files. It provides efficient block-wise 
+    implementations of core linear-algebra operations (matrix multiplication, 
+    SVD, PCA, QR decomposition, and canonical correlation analysis) written 
+    in C++ and R. These building blocks are designed not only for direct use, 
+    but also as foundational components for developing new statistical methods 
+    that must operate on datasets too large to fit in memory. The package 
+    supports data provided either as 'HDF5' files or standard R objects, and is 
+    intended for high-dimensional applications such as 'omics' and 
+    precision-medicine research.
 License: MIT + file LICENSE
-Depends: R (>= 3.6.0)
-Imports: data.table, Rcpp (>= 1.0.6), RcppParallel (>= 5.0.2), RCurl,
-        rhdf5, utils
-LinkingTo: Rcpp, RcppEigen, RcppParallel, beachmat, Rhdf5lib, RSpectra,
-        BH
-Suggests: HDF5Array, DelayedArray, Matrix, BiocStyle, knitr, rmarkdown,
-        ggplot2, microbenchmark
-SystemRequirements: GNU make, C++11
+Depends: R (>= 4.1.0)
+Imports: data.table, Rcpp (>= 1.0.6), RCurl, rhdf5, utils
+LinkingTo: Rcpp, RcppEigen, Rhdf5lib, BH
+Suggests: HDF5Array, Matrix, BiocStyle, knitr, rmarkdown, ggplot2,
+        microbenchmark
+SystemRequirements: GNU make, C++17
 Encoding: UTF-8
 VignetteBuilder: knitr
-RoxygenNote: 7.1.2
+RoxygenNote: 7.3.3
 NeedsCompilation: yes
-Packaged: 2022-03-28 12:32:08 UTC; dpelegri
-Author: Dolors Pelegri-Siso [aut, cre]
-    (<https://orcid.org/0000-0002-5993-3003>),
-  Juan R. Gonzalez [aut] (<https://orcid.org/0000-0003-3267-2146>)
+Author: Dolors Pelegri-Siso [aut, cre] (ORCID:
+    <https://orcid.org/0000-0002-5993-3003>),
+  Juan R. Gonzalez [aut] (ORCID: <https://orcid.org/0000-0003-3267-2146>)
 Maintainer: Dolors Pelegri-Siso <dolors.pelegri@isglobal.org>
+Packaged: 2025-11-28 17:13:22 UTC; mailos
 Repository: CRAN
-Date/Publication: 2022-03-29 22:00:07 UTC
+Date/Publication: 2025-11-29 13:30:28 UTC
