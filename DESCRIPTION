@@ -2,7 +2,7 @@ Package: BigDataStatMeth
 Type: Package
 Title: Tools and Infrastructure for Developing 'Scalable' 'HDF5'-Based
         Methods
-Version: 1.0.2
+Version: 1.0.3
 Date: 2025-11-28
 Authors@R: 
     c(
@@ -42,6 +42,6 @@ Author: Dolors Pelegri-Siso [aut, cre] (ORCID:
     <https://orcid.org/0000-0002-5993-3003>),
   Juan R. Gonzalez [aut] (ORCID: <https://orcid.org/0000-0003-3267-2146>)
 Maintainer: Dolors Pelegri-Siso <dolors.pelegri@isglobal.org>
-Packaged: 2025-11-28 17:13:22 UTC; mailos
+Packaged: 2025-12-19 09:00:07 UTC; mailos
 Repository: CRAN
-Date/Publication: 2025-11-29 13:30:28 UTC
+Date/Publication: 2025-12-22 13:20:08 UTC

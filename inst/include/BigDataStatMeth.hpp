@@ -292,11 +292,11 @@
 // =============================================================================
 // LEVEL 0 - HDF5 DATASET UTILITIES
 // =============================================================================
-#include "hdf5Utilities/hdf5SplitDataset.hpp"
-    // #include "hdf5Utilities/hdf5BindDatasets.hpp"
-#include "hdf5Utilities/hdf5ReduceDataset.hpp"
-    // #include "hdf5Utilities/hdf5SortDataset.hpp"
-#include "hdf5Utilities/hdf5ApplytoDatasets.hpp"
+    #include "hdf5Utilities/hdf5SplitDataset.hpp"
+    #include "hdf5Utilities/hdf5BindDatasets.hpp"
+    #include "hdf5Utilities/hdf5ReduceDataset.hpp"
+    #include "hdf5Utilities/hdf5SortDataset.hpp"
+    #include "hdf5Utilities/hdf5ApplytoDatasets.hpp"
     // #include "hdf5Utilities/hdf5MoveDatasets.hpp"
         
 // =============================================================================

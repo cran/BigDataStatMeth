@@ -1,12 +1,12 @@
-f9b954a3bc543109be8643d3f24cf30b *DESCRIPTION
+2e9ccd162be67be300d8b7826861d6df *DESCRIPTION
 a76db2814da55e5c13aa005f8af23b5f *LICENSE
 a495a0c152a3751d5b0edf96f2dbd339 *NAMESPACE
-e7f000ed321bf6dbe8bcbaba52b7b0fa *NEWS.md
+8f1527bae3a9b4629bf150f9722d6d07 *NEWS.md
 3b85414398c2de3922766f5b04e40c30 *R/BigDataStatMeth.R
 da20d5b82533c42209dd5c4ecdbabcf5 *R/ImportData_hdf5.R
 749829f6e3abc9c5fb4fb01e114127f6 *R/RcppExports.R
 f04f8f5206b5dd159a8395642bc97a78 *R/data.R
-7589a94b25bba1a90f4e773e50befaf5 *README.md
+bffd791400adb330ed310041390a1047 *README.md
 a47aa42ac56b5fba62ab7517d3940215 *build/vignette.rds
 6071edd604dbeb75308cfbedc7790398 *cleanup
 4eb4445991aff7ff14418e50da65ed11 *configure
@@ -17,8 +17,8 @@ abe954ba9c803b242f384520194c7099 *data/miRNA.rda
 1d2cef225279aae4ec50ec7330cf2f54 *inst/cc
 520877569dcc4bb4293dac70419dc24a *inst/doc/BigDataStatMeth.R
 c8c1449e8ba3ec5cfa0d9fca85c8fba7 *inst/doc/BigDataStatMeth.Rmd
-9b142eed9c0a21bf24f0de5341a00c7f *inst/doc/BigDataStatMeth.html
-5b72c4511c017772fcb72eb3e4dd738b *inst/include/BigDataStatMeth.hpp
+c3d6b4a0c3ac38f6a5ec2bf2abf32ae0 *inst/doc/BigDataStatMeth.html
+092f60b681f6bf9ab4a9b114b6c9ae9f *inst/include/BigDataStatMeth.hpp
 c1ee227f3ae984057aec6d3ea6cfe2fe *inst/include/Spectra/DavidsonSymEigsSolver.h
 cbd44c49e74804cb97e2d237982a40eb *inst/include/Spectra/GenEigsBase.h
 3fd3c388c17030bd21c751aa0d780f60 *inst/include/Spectra/GenEigsComplexShiftSolver.h
@@ -184,8 +184,8 @@ cbb791a087ceff26c200ca405dc5d824 *man/bdsubset_hdf5_dataset.Rd
 44baf404faf6f06e8bb7e82d9a8a16f4 *man/cancer.Rd
 63d6076faba84eb70d59e18e1a016d78 *man/colesterol.Rd
 92298b5b01c08ea139f9349b2fb73a74 *man/miRNA.Rd
-f57c414c24c52b0734ee97ce4769437c *src/Makevars.in
-d8630bcc7bcd5bff22266334ba4f9f79 *src/Makevars.win
+1dce6051b70ed9abad33b03f39d55941 *src/Makevars.in
+57c0e7c746d4a29b656499da35154999 *src/Makevars.win
 85cae3d8ea9221b592ced359435b8bb5 *src/RcppExports.cpp
 ca3d9e755122f35b41ac787a9f3dcedf *src/hdf5_CholeskyDec.cpp
 3c766daae63ad10c852ae692354ceabb *src/hdf5_QRDecomposition.cpp
