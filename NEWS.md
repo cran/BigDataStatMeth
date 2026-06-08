@@ -1,3 +1,46 @@
+# BigDataStatMeth 2.0.2
+
+## Performance
+
+- PATH 1 preload strategy added to `crossprod()`, `tcrossprod()`,
+  aggregation functions, `scale()`, and `solve()`: when input fits
+  within 20% of available RAM, a single HDF5 read + BLAS call + single
+  write replaces the block loop.
+- `scale()` PATH 2 (block-wise streaming) is now parallelized with OpenMP.
+- `hdf5matrix_options(paral = TRUE)` now forces PATH 2 (OMP streaming)
+  in `%*%`, `crossprod()`, `tcrossprod()`, aggregations, and `scale()`,
+  giving explicit thread control regardless of matrix size.
+- `getAvailableMemoryMB()` now uses platform-native detection (macOS:
+  `host_statistics64`; Linux: `/proc/meminfo`), replacing the hardcoded
+  4 GB fallback.
+- TSQR: Step 3 Q-assembly parallelized; block size decoupled from thread
+  count (`target_blocks = max(4, nthreads * 4)`).
+
+## Bug fixes
+
+- `rbind()` and `cbind()` with 3 or more `HDF5Matrix` arguments no
+  longer produce dataset names exceeding 1400 characters. Auto-generated
+  names are now `rbind_N_<uid>` with a random 8-character identifier,
+  also preventing "dataset already exists" collisions. Two-argument
+  calls are unchanged (`A_rbind_B`).
+- Fixed `paral = FALSE` being silently ignored in `multiplication()`
+  PATH 2/3.
+
+## Correctness
+
+- Restored `#pragma omp critical(accessFile)` in `crossprod()`,
+  `tcrossprod()`, and aggregation PATH 2 (race condition fix).
+- Fixed SIGABRT in `Cholesky_decomposition_intermediate_hdf5` on
+  macOS ARM64 (removed `throw` from OpenMP parallel region).
+
+## Documentation
+
+- `scale()`: added `paral`, `threads` parameters; PATH 1/PATH 2
+  `@details`; `@seealso hdf5matrix_options()`.
+- `split()`, `hdf5_apply()`, `hdf5_reduce()`: clarified calling
+  conventions and two-level access pattern. Fixed legacy example.
+- Added vignette section "Dataset operations: split, reduce, and apply".
+
 # BigDataStatMeth 2.0.1
 
 * Fixed vignette build failure on Debian: replaced external CSV file

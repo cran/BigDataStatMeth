@@ -52,11 +52,19 @@ Invisibly \code{NULL}. Results written to \code{outgroup}.
 Open them with \code{\link{hdf5_matrix}()}.
 }
 \description{
-Applies one of several supported operations to a list of datasets
-stored in an HDF5 group. Delegates to \code{bdapply_Function_hdf5()}.
+Standalone function that applies a predefined algebraic or statistical
+operation to a list of datasets stored in an HDF5 group, writing results
+to \code{outgroup}. No open \code{HDF5Matrix} object is required.
+
+\strong{This is not equivalent to \code{base::apply()}.} It dispatches
+built-in C++ operations (QR, cross-product, Cholesky, etc.) to a batch of
+named datasets in the file.
 }
 \details{
-Supported values for \code{func}:
+Use \code{hdf5_apply()} when you only have the file path and group name.
+If you already have an open \code{HDF5Matrix}, use
+\code{\link{apply_function}(x, ...)} instead — both produce the same result.
+
 \describe{
 \item{\code{"CrossProd"}}{Compute \eqn{A^T A} for each dataset.}
 \item{\code{"tCrossProd"}}{Compute \eqn{A A^T} for each dataset.}
@@ -76,20 +84,21 @@ Supported values for \code{func}:
 \examples{
 \donttest{
 tmp <- tempfile(fileext = ".h5")
-bdCreate_hdf5_matrix(tmp, matrix(rnorm(20), 4, 5), "inp", "A",
-                     overwriteFile = FALSE)
-bdCreate_hdf5_matrix(tmp, matrix(rnorm(20), 4, 5), "inp", "B",
-                     overwriteFile = FALSE)
-hdf5_apply(tmp, group = "inp", datasets = c("A", "B"),
-           func = "CrossProd", outgroup = "out")
-res_A <- hdf5_matrix(tmp, "out/A")
+A <- hdf5_create_matrix(tmp, "inp/A", data = matrix(rnorm(25), 5, 5))
+B <- hdf5_create_matrix(tmp, "inp/B", data = matrix(rnorm(25), 5, 5))
+hdf5_apply(tmp, group = "inp", datasets = c("A", "B"), 
+func = "CrossProd", outgroup = "out")
+res <- list_datasets(tmp)
+res
+res_A <- hdf5_matrix(tmp, res[3])
 dim(res_A)   # 5 x 5
 close(res_A)
+hdf5_close_all()
 unlink(tmp)
 }
 
 }
 \seealso{
-\code{\link{hdf5_reduce}},
-\code{\link{crossprod.HDF5Matrix}}, \code{\link{qr.HDF5Matrix}}
+\code{\link{apply_function}} for the S3 method on an open
+\code{HDF5Matrix}; \code{\link{hdf5_reduce}} for group-level reduction.
 }

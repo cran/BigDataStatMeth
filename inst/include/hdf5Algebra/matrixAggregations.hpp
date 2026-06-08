@@ -39,10 +39,11 @@
 #ifndef BIGDATASTATMETH_HDF5_MATRIXAGGREGATIONS_HPP
 #define BIGDATASTATMETH_HDF5_MATRIXAGGREGATIONS_HPP
 
-#include <RcppEigen.h>
-#include "H5Cpp.h"
+// #include <RcppEigen.h>
+// #include "H5Cpp.h"
 #include <cmath>
 #include <limits>
+#include "Utilities/system-utils.hpp"
 
 namespace BigDataStatMeth {
 
@@ -105,6 +106,35 @@ inline hsize_t agg_block_size(Rcpp::Nullable<int> wsize,
     return std::min(bs, iterated);
 }
 
+
+/**
+ * @brief Preload entire matrix if it fits within 20% of available RAM.
+ * Mirrors the PATH 1 strategy used in multiplication.hpp and crossprod.hpp.
+ * @return true if matrix was read (vd is filled); false → use block path.
+ */
+inline bool agg_try_preload(BigDataStatMeth::hdf5Dataset* dsA,
+                            hsize_t nHDF5rows, hsize_t nHDF5cols,
+                            std::vector<double>& vd,
+                            bool bparal = false)
+{
+    
+    if (bparal) return false;  // force OMP → skip preload
+    
+    const double mem_MB   = static_cast<double>(nHDF5rows) * nHDF5cols
+    * 8.0 / (1024.0 * 1024.0);
+    const double avail_MB = std::max(512.0,
+                                     static_cast<double>(getAvailableMemoryMB()));
+    if (mem_MB > avail_MB * 0.20) return false;
+    
+    const std::vector<hsize_t> stride = {1, 1}, blk = {1, 1};
+    vd.resize(static_cast<std::size_t>(nHDF5rows) * nHDF5cols);
+    dsA->readDatasetBlock({0, 0}, {nHDF5rows, nHDF5cols},
+                          stride, blk, vd.data());
+    return true;
+}
+
+
+
 // RowMajor Eigen map alias used throughout this file
 using RMMatd = Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>;
 
@@ -142,6 +172,17 @@ inline Eigen::VectorXd get_HDF5_colSums(BigDataStatMeth::hdf5Dataset* dsA,
         agg_make_blocks(nHDF5rows, bs, starts, sizes);
 
         const std::vector<hsize_t> stride = {1, 1}, blk = {1, 1};
+        
+        // PRELOAD
+        {
+            std::vector<double> vd_full;
+            if (agg_try_preload(dsA, nHDF5rows, nHDF5cols, vd_full, bparal)) {
+                Eigen::Map<const RMMatd> X(vd_full.data(), nHDF5rows, nHDF5cols);
+                return X.rowwise().sum();
+            }
+        }
+        
+        // block-wise
         const int nthreads = static_cast<int>(
             BigDataStatMeth::get_threads(bparal, threads));
 
@@ -151,12 +192,10 @@ inline Eigen::VectorXd get_HDF5_colSums(BigDataStatMeth::hdf5Dataset* dsA,
                 shared(dsA, starts, sizes, result)
         for (hsize_t bi = 0; bi < starts.size(); bi++) {
             std::vector<double> vd(sizes[bi] * nHDF5cols);
-            //.. 20260325 - remove critical ..// #pragma omp critical(accessFile)
-            //.. 20260325 - remove critical ..//{ 
-            
-            dsA->readDatasetBlock({starts[bi], 0}, {sizes[bi], nHDF5cols}, stride, blk, vd.data()); 
-            
-            //.. 20260325 - remove critical ..//}
+            #pragma omp critical(accessFile)
+            { 
+                dsA->readDatasetBlock({starts[bi], 0}, {sizes[bi], nHDF5cols}, stride, blk, vd.data()); 
+            }
 
             Eigen::Map<const RMMatd> X(vd.data(),
                 static_cast<Eigen::Index>(sizes[bi]),
@@ -220,6 +259,17 @@ inline Eigen::VectorXd get_HDF5_colMeans(BigDataStatMeth::hdf5Dataset* dsA,
         agg_make_blocks(nHDF5rows, bs, starts, sizes);
 
         const std::vector<hsize_t> stride = {1, 1}, blk = {1, 1};
+        
+        // PRELOAD
+        {
+            std::vector<double> vd_full;
+            if (agg_try_preload(dsA, nHDF5rows, nHDF5cols, vd_full, bparal)) {
+                Eigen::Map<const RMMatd> X(vd_full.data(), nHDF5rows, nHDF5cols);
+                return X.rowwise().mean();
+            }
+        }
+        
+        // block-wise
         const int nthreads = static_cast<int>(
             BigDataStatMeth::get_threads(bparal, threads));
 
@@ -229,12 +279,10 @@ inline Eigen::VectorXd get_HDF5_colMeans(BigDataStatMeth::hdf5Dataset* dsA,
                 shared(dsA, starts, sizes, result)
         for (hsize_t bi = 0; bi < starts.size(); bi++) {
             std::vector<double> vd(sizes[bi] * nHDF5cols);
-            //.. 20260325 - remove critical ..// #pragma omp critical(accessFile)
-            //.. 20260325 - remove critical ..// { 
-            
-            dsA->readDatasetBlock({starts[bi], 0}, {sizes[bi], nHDF5cols}, stride, blk, vd.data()); 
-            
-            //.. 20260325 - remove critical ..// }
+            #pragma omp critical(accessFile)
+            { 
+                dsA->readDatasetBlock({starts[bi], 0}, {sizes[bi], nHDF5cols}, stride, blk, vd.data()); 
+            }
 
             Eigen::Map<const RMMatd> X(vd.data(),
                 static_cast<Eigen::Index>(sizes[bi]),
@@ -286,6 +334,17 @@ inline Eigen::VectorXd get_HDF5_colMins(BigDataStatMeth::hdf5Dataset* dsA,
         agg_make_blocks(nHDF5rows, bs, starts, sizes);
 
         const std::vector<hsize_t> stride = {1, 1}, blk = {1, 1};
+        
+        // PRELOAD
+        {
+            std::vector<double> vd_full;
+            if (agg_try_preload(dsA, nHDF5rows, nHDF5cols, vd_full, bparal)) {
+                Eigen::Map<const RMMatd> X(vd_full.data(), nHDF5rows, nHDF5cols);
+                return X.rowwise().minCoeff();
+            }
+        }
+        
+        // block-wise
         const int nthreads = static_cast<int>(
             BigDataStatMeth::get_threads(bparal, threads));
 
@@ -298,10 +357,10 @@ inline Eigen::VectorXd get_HDF5_colMins(BigDataStatMeth::hdf5Dataset* dsA,
                 shared(dsA, starts, sizes, result)
         for (hsize_t bi = 0; bi < starts.size(); bi++) {
             std::vector<double> vd(sizes[bi] * nHDF5cols);
-            //.. 20260325 - remove critical ..// #pragma omp critical(accessFile)
-            //.. 20260325 - remove critical ..// { 
-            dsA->readDatasetBlock({starts[bi], 0}, {sizes[bi], nHDF5cols}, stride, blk, vd.data()); 
-            //.. 20260325 - remove critical ..// }
+            #pragma omp critical(accessFile)
+            { 
+                dsA->readDatasetBlock({starts[bi], 0}, {sizes[bi], nHDF5cols}, stride, blk, vd.data()); 
+            }
 
             Eigen::Map<const RMMatd> X(vd.data(),
                 static_cast<Eigen::Index>(sizes[bi]),
@@ -350,6 +409,17 @@ inline Eigen::VectorXd get_HDF5_colMaxs(BigDataStatMeth::hdf5Dataset* dsA,
         agg_make_blocks(nHDF5rows, bs, starts, sizes);
 
         const std::vector<hsize_t> stride = {1, 1}, blk = {1, 1};
+        
+        // PRELOAD
+        {
+            std::vector<double> vd_full;
+            if (agg_try_preload(dsA, nHDF5rows, nHDF5cols, vd_full, bparal)) {
+                Eigen::Map<const RMMatd> X(vd_full.data(), nHDF5rows, nHDF5cols);
+                return X.rowwise().maxCoeff();
+            }
+        }
+        
+        // block-wise
         const int nthreads = static_cast<int>(
             BigDataStatMeth::get_threads(bparal, threads));
 
@@ -362,10 +432,10 @@ inline Eigen::VectorXd get_HDF5_colMaxs(BigDataStatMeth::hdf5Dataset* dsA,
                 shared(dsA, starts, sizes, result)
         for (hsize_t bi = 0; bi < starts.size(); bi++) {
             std::vector<double> vd(sizes[bi] * nHDF5cols);
-            // #pragma omp critical(accessFile)
-            //.. 20260325 - remove critical ..// { 
+            #pragma omp critical(accessFile)
+            { 
             dsA->readDatasetBlock({starts[bi], 0}, {sizes[bi], nHDF5cols},stride, blk, vd.data()); 
-            //.. 20260325 - remove critical ..// }
+            }
 
             Eigen::Map<const RMMatd> X(vd.data(),
                 static_cast<Eigen::Index>(sizes[bi]),
@@ -425,8 +495,21 @@ inline Eigen::VectorXd get_HDF5_colVars(BigDataStatMeth::hdf5Dataset* dsA,
         agg_make_blocks(nHDF5rows, bs, starts, sizes);
 
         const std::vector<hsize_t> stride = {1, 1}, blk = {1, 1};
-        const int nthreads = static_cast<int>(
-            BigDataStatMeth::get_threads(bparal, threads));
+        
+        // PRELOAD
+        {
+            std::vector<double> vd_full;
+            if (agg_try_preload(dsA, nHDF5rows, nHDF5cols, vd_full, bparal)) {
+                Eigen::Map<const RMMatd> X(vd_full.data(), nHDF5rows, nHDF5cols);
+                const double n         = static_cast<double>(nHDF5cols);
+                const Eigen::VectorXd colsum   = X.rowwise().sum();
+                const Eigen::VectorXd colsumsq = X.rowwise().squaredNorm();
+                return (colsumsq.array() - colsum.array().square() / n) / (n - 1.0);
+            }
+        }
+        
+        // block-wise
+        const int nthreads = static_cast<int>( BigDataStatMeth::get_threads(bparal, threads));
 
         Eigen::VectorXd result(nHDF5rows);
 
@@ -434,10 +517,10 @@ inline Eigen::VectorXd get_HDF5_colVars(BigDataStatMeth::hdf5Dataset* dsA,
                 shared(dsA, starts, sizes, result)
         for (hsize_t bi = 0; bi < starts.size(); bi++) {
             std::vector<double> vd(sizes[bi] * nHDF5cols);
-            //.. 20260325 - remove critical ..// #pragma omp critical(accessFile)
-            //.. 20260325 - remove critical ..// { 
-            dsA->readDatasetBlock({starts[bi], 0}, {sizes[bi], nHDF5cols},stride, blk, vd.data()); 
-            //.. 20260325 - remove critical ..// }
+            #pragma omp critical(accessFile)
+            { 
+                dsA->readDatasetBlock({starts[bi], 0}, {sizes[bi], nHDF5cols},stride, blk, vd.data()); 
+            }
 
             Eigen::Map<const RMMatd> X(vd.data(),
                 static_cast<Eigen::Index>(sizes[bi]),
@@ -524,6 +607,17 @@ inline Eigen::VectorXd get_HDF5_rowSums(BigDataStatMeth::hdf5Dataset* dsA,
         agg_make_blocks(nHDF5cols, bs, starts, sizes);
 
         const std::vector<hsize_t> stride = {1, 1}, blk = {1, 1};
+        
+        // PRELOAD
+        {
+            std::vector<double> vd_full;
+            if (agg_try_preload(dsA, nHDF5rows, nHDF5cols, vd_full, bparal)) {
+                Eigen::Map<const RMMatd> X(vd_full.data(), nHDF5rows, nHDF5cols);
+                return X.colwise().sum().transpose();
+            }
+        }
+        
+        // block-wise
         const int nthreads = static_cast<int>(
             BigDataStatMeth::get_threads(bparal, threads));
 
@@ -533,10 +627,10 @@ inline Eigen::VectorXd get_HDF5_rowSums(BigDataStatMeth::hdf5Dataset* dsA,
                 shared(dsA, starts, sizes, result)
         for (hsize_t bi = 0; bi < starts.size(); bi++) {
             std::vector<double> vd(nHDF5rows * sizes[bi]);
-            // #pragma omp critical(accessFile)
-            //.. 20260325 - remove critical ..// { 
-            dsA->readDatasetBlock({0, starts[bi]}, {nHDF5rows, sizes[bi]},stride, blk, vd.data()); 
-            //.. 20260325 - remove critical ..// }
+            #pragma omp critical(accessFile)
+            { 
+                dsA->readDatasetBlock({0, starts[bi]}, {nHDF5rows, sizes[bi]},stride, blk, vd.data()); 
+            }
 
             // Map as (ncols_R × block_rrows) RowMajor
             Eigen::Map<const RMMatd> X(vd.data(),
@@ -592,6 +686,17 @@ inline Eigen::VectorXd get_HDF5_rowMeans(BigDataStatMeth::hdf5Dataset* dsA,
         agg_make_blocks(nHDF5cols, bs, starts, sizes);
 
         const std::vector<hsize_t> stride = {1, 1}, blk = {1, 1};
+        
+        // PRELOAD
+        {
+            std::vector<double> vd_full;
+            if (agg_try_preload(dsA, nHDF5rows, nHDF5cols, vd_full, bparal)) {
+                Eigen::Map<const RMMatd> X(vd_full.data(), nHDF5rows, nHDF5cols);
+                return X.colwise().mean().transpose();
+            }
+        }
+        
+        // block-wise
         const int nthreads = static_cast<int>(
             BigDataStatMeth::get_threads(bparal, threads));
 
@@ -601,10 +706,10 @@ inline Eigen::VectorXd get_HDF5_rowMeans(BigDataStatMeth::hdf5Dataset* dsA,
                 shared(dsA, starts, sizes, result)
         for (hsize_t bi = 0; bi < starts.size(); bi++) {
             std::vector<double> vd(nHDF5rows * sizes[bi]);
-            //.. 20260325 - remove critical ..// #pragma omp critical(accessFile)
-            //.. 20260325 - remove critical ..// { 
-            dsA->readDatasetBlock({0, starts[bi]}, {nHDF5rows, sizes[bi]},stride, blk, vd.data()); 
-            //.. 20260325 - remove critical ..// }
+            #pragma omp critical(accessFile)
+            { 
+                dsA->readDatasetBlock({0, starts[bi]}, {nHDF5rows, sizes[bi]},stride, blk, vd.data()); 
+            }
 
             // Map as (ncols_R × block_rrows) RowMajor
             Eigen::Map<const RMMatd> X(vd.data(),
@@ -657,6 +762,17 @@ inline Eigen::VectorXd get_HDF5_rowMins(BigDataStatMeth::hdf5Dataset* dsA,
         agg_make_blocks(nHDF5cols, bs, starts, sizes);
 
         const std::vector<hsize_t> stride = {1, 1}, blk = {1, 1};
+        
+        // PRELOAD
+        {
+            std::vector<double> vd_full;
+            if (agg_try_preload(dsA, nHDF5rows, nHDF5cols, vd_full, bparal)) {
+                Eigen::Map<const RMMatd> X(vd_full.data(), nHDF5rows, nHDF5cols);
+                return X.colwise().minCoeff().transpose();
+            }
+        }
+        
+        // block-wise
         const int nthreads = static_cast<int>(
             BigDataStatMeth::get_threads(bparal, threads));
 
@@ -668,10 +784,10 @@ inline Eigen::VectorXd get_HDF5_rowMins(BigDataStatMeth::hdf5Dataset* dsA,
                 shared(dsA, starts, sizes, result)
         for (hsize_t bi = 0; bi < starts.size(); bi++) {
             std::vector<double> vd(nHDF5rows * sizes[bi]);
-            //.. 20260325 - remove critical ..// #pragma omp critical(accessFile)
-            //.. 20260325 - remove critical ..// { 
-            dsA->readDatasetBlock({0, starts[bi]}, {nHDF5rows, sizes[bi]}, stride, blk, vd.data()); 
-            //.. 20260325 - remove critical ..// }
+            #pragma omp critical(accessFile)
+            { 
+                dsA->readDatasetBlock({0, starts[bi]}, {nHDF5rows, sizes[bi]}, stride, blk, vd.data()); 
+            }
 
             Eigen::Map<const RMMatd> X(vd.data(),
                 static_cast<Eigen::Index>(nHDF5rows),
@@ -729,6 +845,17 @@ inline Eigen::VectorXd get_HDF5_rowMaxs(BigDataStatMeth::hdf5Dataset* dsA,
         agg_make_blocks(nHDF5cols, bs, starts, sizes);
 
         const std::vector<hsize_t> stride = {1, 1}, blk = {1, 1};
+        
+        // PRELOAD
+        {
+            std::vector<double> vd_full;
+            if (agg_try_preload(dsA, nHDF5rows, nHDF5cols, vd_full, bparal)) {
+                Eigen::Map<const RMMatd> X(vd_full.data(), nHDF5rows, nHDF5cols);
+                return X.colwise().maxCoeff().transpose();
+            }
+        }
+        
+        // block-wise
         const int nthreads = static_cast<int>(
             BigDataStatMeth::get_threads(bparal, threads));
 
@@ -740,10 +867,10 @@ inline Eigen::VectorXd get_HDF5_rowMaxs(BigDataStatMeth::hdf5Dataset* dsA,
                 shared(dsA, starts, sizes, result)
         for (hsize_t bi = 0; bi < starts.size(); bi++) {
             std::vector<double> vd(nHDF5rows * sizes[bi]);
-            //.. 20260325 - remove critical ..// #pragma omp critical(accessFile)
-            //.. 20260325 - remove critical ..// { 
-            dsA->readDatasetBlock({0, starts[bi]}, {nHDF5rows, sizes[bi]},stride, blk, vd.data()); 
-            //.. 20260325 - remove critical ..// }
+            #pragma omp critical(accessFile)
+            { 
+                dsA->readDatasetBlock({0, starts[bi]}, {nHDF5rows, sizes[bi]},stride, blk, vd.data()); 
+            }
 
             Eigen::Map<const RMMatd> X(vd.data(),
                 static_cast<Eigen::Index>(nHDF5rows),
@@ -807,6 +934,20 @@ inline Eigen::VectorXd get_HDF5_rowVars(BigDataStatMeth::hdf5Dataset* dsA,
         agg_make_blocks(nHDF5cols, bs, starts, sizes);
 
         const std::vector<hsize_t> stride = {1, 1}, blk = {1, 1};
+        
+        // PRELOAD
+        {
+            std::vector<double> vd_full;
+            if (agg_try_preload(dsA, nHDF5rows, nHDF5cols, vd_full, bparal)) {
+                Eigen::Map<const RMMatd> X(vd_full.data(), nHDF5rows, nHDF5cols);
+                const double n               = static_cast<double>(nHDF5rows);
+                const Eigen::RowVectorXd rs  = X.colwise().sum();
+                const Eigen::RowVectorXd rs2 = X.colwise().squaredNorm();
+                return ((rs2.array() - rs.array().square() / n) / (n - 1.0)).transpose();
+            }
+        }
+        
+        // block-wise
         const int nthreads = static_cast<int>(
             BigDataStatMeth::get_threads(bparal, threads));
 
@@ -816,10 +957,10 @@ inline Eigen::VectorXd get_HDF5_rowVars(BigDataStatMeth::hdf5Dataset* dsA,
                 shared(dsA, starts, sizes, result)
         for (hsize_t bi = 0; bi < starts.size(); bi++) {
             std::vector<double> vd(nHDF5rows * sizes[bi]);
-            //.. 20260325 - remove critical ..// #pragma omp critical(accessFile)
-            //.. 20260325 - remove critical ..// { 
+            #pragma omp critical(accessFile)
+            { 
                 dsA->readDatasetBlock({0, starts[bi]}, {nHDF5rows, sizes[bi]}, stride, blk, vd.data()); 
-                //.. 20260325 - remove critical ..// }
+            }
 
             // Map as (ncols_R × block_rrows) RowMajor
             Eigen::Map<const RMMatd> X(vd.data(),
@@ -907,6 +1048,17 @@ inline double get_HDF5_scalar_sum(BigDataStatMeth::hdf5Dataset* dsA,
         agg_make_blocks(nHDF5rows, bs, starts, sizes);
 
         const std::vector<hsize_t> stride = {1, 1}, blk = {1, 1};
+        
+        // PRELOAD
+        {
+            std::vector<double> vd_full;
+            if (agg_try_preload(dsA, nHDF5rows, nHDF5cols, vd_full, bparal)) {
+                Eigen::Map<const RMMatd> X(vd_full.data(), nHDF5rows, nHDF5cols);
+                return X.sum();
+            }
+        }
+        
+        // block-wise
         const int nthreads = static_cast<int>(
             BigDataStatMeth::get_threads(bparal, threads));
 
@@ -916,10 +1068,10 @@ inline double get_HDF5_scalar_sum(BigDataStatMeth::hdf5Dataset* dsA,
                 shared(dsA, starts, sizes) reduction(+:total_sum)
         for (hsize_t bi = 0; bi < starts.size(); bi++) {
             std::vector<double> vd(sizes[bi] * nHDF5cols);
-            //.. 20260325 - remove critical ..// #pragma omp critical(accessFile)
-            //.. 20260325 - remove critical ..// { 
-            dsA->readDatasetBlock({starts[bi], 0}, {sizes[bi], nHDF5cols}, stride, blk, vd.data()); 
-            //.. 20260325 - remove critical ..// }
+            #pragma omp critical(accessFile)
+            { 
+                dsA->readDatasetBlock({starts[bi], 0}, {sizes[bi], nHDF5cols}, stride, blk, vd.data()); 
+            }
 
             Eigen::Map<const RMMatd> X(vd.data(),
                 static_cast<Eigen::Index>(sizes[bi]),
@@ -994,6 +1146,17 @@ inline double get_HDF5_scalar_min(BigDataStatMeth::hdf5Dataset* dsA,
         agg_make_blocks(nHDF5rows, bs, starts, sizes);
 
         const std::vector<hsize_t> stride = {1, 1}, blk = {1, 1};
+        
+        // PRELOAD
+        {
+            std::vector<double> vd_full;
+            if (agg_try_preload(dsA, nHDF5rows, nHDF5cols, vd_full, bparal)) {
+                Eigen::Map<const RMMatd> X(vd_full.data(), nHDF5rows, nHDF5cols);
+                return X.minCoeff();
+            }
+        }
+        
+        // block-wise
         const int nthreads = static_cast<int>(
             BigDataStatMeth::get_threads(bparal, threads));
 
@@ -1003,10 +1166,10 @@ inline double get_HDF5_scalar_min(BigDataStatMeth::hdf5Dataset* dsA,
                 shared(dsA, starts, sizes) reduction(min:global_min)
         for (hsize_t bi = 0; bi < starts.size(); bi++) {
             std::vector<double> vd(sizes[bi] * nHDF5cols);
-            //.. 20260325 - remove critical ..// #pragma omp critical(accessFile)
-            //.. 20260325 - remove critical ..// { 
-            dsA->readDatasetBlock({starts[bi], 0}, {sizes[bi], nHDF5cols}, stride, blk, vd.data()); 
-            //.. 20260325 - remove critical ..// }
+            #pragma omp critical(accessFile)
+            { 
+                dsA->readDatasetBlock({starts[bi], 0}, {sizes[bi], nHDF5cols}, stride, blk, vd.data()); 
+            }
 
             Eigen::Map<const RMMatd> X(vd.data(),
                 static_cast<Eigen::Index>(sizes[bi]),
@@ -1055,6 +1218,17 @@ inline double get_HDF5_scalar_max(BigDataStatMeth::hdf5Dataset* dsA,
         agg_make_blocks(nHDF5rows, bs, starts, sizes);
 
         const std::vector<hsize_t> stride = {1, 1}, blk = {1, 1};
+        
+        // PRELOAD
+        {
+            std::vector<double> vd_full;
+            if (agg_try_preload(dsA, nHDF5rows, nHDF5cols, vd_full, bparal)) {
+                Eigen::Map<const RMMatd> X(vd_full.data(), nHDF5rows, nHDF5cols);
+                return X.maxCoeff();
+            }
+        }
+        
+        // block-wise
         const int nthreads = static_cast<int>(
             BigDataStatMeth::get_threads(bparal, threads));
 
@@ -1064,10 +1238,10 @@ inline double get_HDF5_scalar_max(BigDataStatMeth::hdf5Dataset* dsA,
                 shared(dsA, starts, sizes) reduction(max:global_max)
         for (hsize_t bi = 0; bi < starts.size(); bi++) {
             std::vector<double> vd(sizes[bi] * nHDF5cols);
-            //.. 20260325 - remove critical ..// #pragma omp critical(accessFile)
-            //.. 20260325 - remove critical ..// { 
-            dsA->readDatasetBlock({starts[bi], 0}, {sizes[bi], nHDF5cols}, stride, blk, vd.data()); 
-            //.. 20260325 - remove critical ..// }
+            #pragma omp critical(accessFile)
+            { 
+                dsA->readDatasetBlock({starts[bi], 0}, {sizes[bi], nHDF5cols}, stride, blk, vd.data()); 
+            }
 
             Eigen::Map<const RMMatd> X(vd.data(),
                 static_cast<Eigen::Index>(sizes[bi]),
@@ -1125,6 +1299,19 @@ inline double get_HDF5_scalar_var(BigDataStatMeth::hdf5Dataset* dsA,
         agg_make_blocks(nHDF5rows, bs, starts, sizes);
 
         const std::vector<hsize_t> stride = {1, 1}, blk = {1, 1};
+        
+        // PRELOAD
+        {
+            std::vector<double> vd_full;
+            if (agg_try_preload(dsA, nHDF5rows, nHDF5cols, vd_full, bparal)) {
+                Eigen::Map<const RMMatd> X(vd_full.data(), nHDF5rows, nHDF5cols);
+                const double total_sum   = X.sum();
+                const double total_sumsq = X.array().square().sum();
+                return (total_sumsq - total_sum * total_sum / N) / (N - 1.0);
+            }
+        }
+        
+        // block-wise
         const int nthreads = static_cast<int>(
             BigDataStatMeth::get_threads(bparal, threads));
 
@@ -1136,10 +1323,10 @@ inline double get_HDF5_scalar_var(BigDataStatMeth::hdf5Dataset* dsA,
                 reduction(+:total_sum, total_sumsq)
         for (hsize_t bi = 0; bi < starts.size(); bi++) {
             std::vector<double> vd(sizes[bi] * nHDF5cols);
-            //.. 20260325 - remove critical ..// #pragma omp critical(accessFile)
-            //.. 20260325 - remove critical ..// { 
-            dsA->readDatasetBlock({starts[bi], 0}, {sizes[bi], nHDF5cols}, stride, blk, vd.data()); 
-            //.. 20260325 - remove critical ..// }
+            #pragma omp critical(accessFile)
+            { 
+                dsA->readDatasetBlock({starts[bi], 0}, {sizes[bi], nHDF5cols}, stride, blk, vd.data()); 
+            }
 
             Eigen::Map<const RMMatd> X(vd.data(),
                 static_cast<Eigen::Index>(sizes[bi]),

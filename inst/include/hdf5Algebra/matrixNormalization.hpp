@@ -38,6 +38,7 @@
 #ifndef BIGDATASTATMETH_HDF5_MATRIXSNORMALIZATION_HPP
 #define BIGDATASTATMETH_HDF5_MATRIXSNORMALIZATION_HPP
 
+#include "Utilities/system-utils.hpp"
 
 namespace BigDataStatMeth {
 
@@ -286,21 +287,42 @@ namespace BigDataStatMeth {
      * @brief HDF5 matrix normalization with pre-computed statistics
      * @details Normalizes an HDF5 matrix dataset using pre-computed statistics.
      * Supports both row-wise and column-wise normalization.
-     * 
-     * @param dsA Input matrix dataset
-     * @param dsNormal Output normalized dataset
-     * @param datanormal Pre-computed normalization parameters
-     * @param wsize Block size for processing
-     * @param bc Whether to center the data
-     * @param bs Whether to scale the data
-     * @param bbyrows Whether to normalize by rows
+     *
+     * When the input matrix fits within 20% of available RAM and @p bparal is
+     * false, a single HDF5 read + vectorised Eigen expression + single write is
+     * used (PATH 1). Otherwise, block-wise streaming with optional OpenMP
+     * parallelism is applied (PATH 2). Setting @p bparal = true forces PATH 2
+     * regardless of matrix size, giving the caller full control over thread count.
+     *
+     * @param dsA       Input matrix dataset
+     * @param dsNormal  Output normalized dataset
+     * @param datanormal Pre-computed normalization parameters (mean and std)
+     * @param wsize     Block size for processing
+     * @param bc        Whether to center the data
+     * @param bs        Whether to scale the data
+     * @param bbyrows   Whether to normalize by rows
      * @param bcorrected Whether to use corrected standard deviation
+     * @param bparal    Enable OpenMP parallelism in PATH 2 (default false).
+     *                  When true, forces block-wise streaming regardless of
+     *                  matrix size, so thread count is respected.
+     * @param threads   Number of OpenMP threads (NULL = system default,
+     *                  always capped by OMP_THREAD_LIMIT for CRAN compliance).
+     *                  Ignored when bparal is false.
      */
+    /*.. 2026/06/01 .. Parallel execution
     inline void RcppNormalizeHdf5( BigDataStatMeth::hdf5Dataset* dsA,
                                           BigDataStatMeth::hdf5Dataset* dsNormal,
                                           Eigen::MatrixXd datanormal,
                                           Rcpp::Nullable<int> wsize, 
                                           bool bc, bool bs, bool bbyrows, bool bcorrected)
+    */
+    inline void RcppNormalizeHdf5( BigDataStatMeth::hdf5Dataset* dsA,
+                                   BigDataStatMeth::hdf5Dataset* dsNormal,
+                                   Eigen::MatrixXd datanormal,
+                                   Rcpp::Nullable<int> wsize, 
+                                   bool bc, bool bs, bool bbyrows, bool bcorrected,
+                                   bool bparal = false,
+                                   Rcpp::Nullable<int> threads = R_NilValue)
     {
         
         try{
@@ -332,7 +354,34 @@ namespace BigDataStatMeth {
                 }    
             }
             
+            // PRELOAD
+            // If A fits within 20% of available RAM, read once, normalize with
+            // a single vectorised Eigen expression, write once.  Eliminates the
+            // per-block HDF5 gzip decompress + compress overhead of block-wise
+            const double mem_MB   = static_cast<double>(nrows) * ncols * 8.0 / (1024.0 * 1024.0);
+            const double avail_MB = std::max(512.0, static_cast<double>(getAvailableMemoryMB()));
+            
+            //.. 2026/06/01 omp paral..// if (mem_MB <= avail_MB * 0.20) 
+            if (!bparal && mem_MB <= avail_MB * 0.20)
+            {
+                std::vector<double> vdFull( static_cast<std::size_t>(nrows) * ncols);
+                dsA->readDatasetBlock( {0, 0}, {nrows, ncols}, stride, block, vdFull.data());
+                
+                Eigen::Map<Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> A_full(vdFull.data(), static_cast<int>(nrows), static_cast<int>(ncols));
+                
+                A_full = RcppNormalize_Data_R_hdf5( A_full, bc, bs, bgetTransposed, datanormal);
+                
+                if (bcorrected) A_full *= correction;
+                
+                dsNormal->writeRowMajorDatasetBlock( A_full, {0, 0}, {nrows, ncols}, stride, block);
+                
+                return void();
+            }
+            
+            
+            // block-wise (matrix too large for preload) 
             //.. 20260224 ..// for(hsize_t i=0; i*blocksize <= nRowsCols ; i++)
+        /*..  2026/06/01 omp paral ..
             for(hsize_t i=0; i*blocksize < nRowsCols ; i++)
             {
                 std::vector<hsize_t> offset, 
@@ -371,24 +420,63 @@ namespace BigDataStatMeth {
                 dsNormal->writeRowMajorDatasetBlock( X, offset, count, stride, block);
                 
             }
+        */
+        
+            const hsize_t nBlocks = (nRowsCols + blocksize - 1) / blocksize;
+            
+            #pragma omp parallel for num_threads( get_threads(bparal, threads) ) schedule(dynamic)
+            for(hsize_t i = 0; i < nBlocks; i++)
+            {
+                std::vector<hsize_t> offset, count;
+                hsize_t sizetoread;
+                
+                if( (i + 1) * blocksize < nRowsCols ) {
+                    sizetoread = blocksize;
+                } else {
+                    sizetoread = nRowsCols - ( i * blocksize );
+                }
+                
+                if(bbyrows == false) {
+                    offset = { i * blocksize, 0 };
+                    count  = { sizetoread, ncols };
+                } else {
+                    offset = { 0, i * blocksize };
+                    count  = { nrows, sizetoread };
+                }
+                
+                std::vector<double> vdA( count[0] * count[1] );
+                #pragma omp critical(accessFile)
+                { 
+                    dsA->readDatasetBlock( {offset[0], offset[1]}, {count[0], count[1]}, stride, block, vdA.data() ); 
+                }
+                
+                Eigen::Map<Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> X(vdA.data(), count[0], count[1]);
+                
+                if(bbyrows == false) {
+                    X = BigDataStatMeth::RcppNormalize_Data_R_hdf5(X, bc, bs, bgetTransposed, datanormal.block(0, offset[0], 2, count[0]));
+                } else {
+                    X = BigDataStatMeth::RcppNormalize_Data_R_hdf5(X, bc, bs, bgetTransposed, datanormal.block(0, offset[1], 2, count[1]));
+                }
+                
+                if(bcorrected) { X = X * correction; }
+                
+                #pragma omp critical(accessFile)
+                { 
+                    dsNormal->writeRowMajorDatasetBlock( X, offset, count, stride, block); 
+                }
+            }
             
         }catch( H5::FileIException& error ) {
-            // checkClose_file(dsA, dsNormal);
             throw std::runtime_error("c++ exception RcppNormalizeHdf5 (File IException)");
         } catch( H5::DataSetIException& error ) { // catch failure caused by the DataSet operations
-            // checkClose_file(dsA, dsNormal);
             throw std::runtime_error("c++ exception RcppNormalizeHdf5 (DataSet IException)");
         } catch( H5::DataSpaceIException& error ) { // catch failure caused by the DataSpace operations
-            // checkClose_file(dsA, dsNormal);
             throw std::runtime_error("c++ exception RcppNormalizeHdf5 (DataSpace IException)");
         } catch( H5::DataTypeIException& error ) { // catch failure caused by the DataSpace operations
-            // checkClose_file(dsA, dsNormal);
             throw std::runtime_error("c++ exception RcppNormalizeHdf5 (DataType IException)");
         } catch(std::exception &ex) {
-            // checkClose_file(dsA, dsNormal);
             throw std::runtime_error(std::string("C++ exception RcppNormalizeHdf5: ") + ex.what());
         } catch (...) {
-            // checkClose_file(dsA, dsNormal);
             throw std::runtime_error("C++ exception RcppNormalizeHdf5 (unknown reason)");
         }
         
@@ -406,10 +494,6 @@ namespace BigDataStatMeth {
         
         
         try{
-
-            // BigDataStatMeth::hdf5Dataset* dsmean = nullptr;
-            // BigDataStatMeth::hdf5Dataset* dssd = nullptr;
-            // BigDataStatMeth::hdf5Dataset* dsNormal = nullptr;
 
             std::unique_ptr<BigDataStatMeth::hdf5Dataset> dsmean(nullptr);
             std::unique_ptr<BigDataStatMeth::hdf5Dataset> dssd(nullptr);
@@ -492,10 +576,6 @@ namespace BigDataStatMeth {
     {
         
         try{
-
-            // BigDataStatMeth::hdf5Dataset* dsmean = nullptr;
-            // BigDataStatMeth::hdf5Dataset* dssd = nullptr;
-            // BigDataStatMeth::hdf5Dataset* dsNormal = nullptr;
 
             std::unique_ptr<BigDataStatMeth::hdf5Dataset> dsmean(nullptr);
             std::unique_ptr<BigDataStatMeth::hdf5Dataset> dssd(nullptr);

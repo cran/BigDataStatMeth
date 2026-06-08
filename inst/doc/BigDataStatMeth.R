@@ -452,6 +452,39 @@ Pinv_h5 <- pseudoinverse(
 
 dim(Pinv_h5)
 
+## ----split-example, eval=FALSE------------------------------------------------
+# fn     <- tempfile(fileext = ".h5")
+# X      <- hdf5_create_matrix(fn, "data/X", data = matrix(rnorm(600), 60, 10))
+# blocks <- split(X, n_blocks = 3)   # returns a named list: block_0, block_1, block_2
+# dim(blocks[["block_0"]])           # 20 x 10
+# lapply(blocks, close)
+# close(X)
+# hdf5_close_all()
+# unlink(fn)
+
+## ----reduce-example, eval=FALSE-----------------------------------------------
+# fn <- tempfile(fileext = ".h5")
+# hdf5_create_matrix(fn, "parts/A", data = matrix(1:12, 3, 4))
+# hdf5_create_matrix(fn, "parts/B", data = matrix(1:12, 3, 4))
+# hdf5_create_matrix(fn, "parts/C", data = matrix(1:12, 3, 4))
+# 
+# entry  <- hdf5_matrix(fn, "parts/A")
+# result <- reduce(entry, func = "+")   # sums A + B + C
+# as.matrix(result)                     # each element equals 3x the original
+# hdf5_close_all()
+# unlink(fn)
+
+## ----apply-function-example, eval=FALSE---------------------------------------
+# fn <- tempfile(fileext = ".h5")
+# hdf5_create_matrix(fn, "data/A", data = matrix(rnorm(50), 5, 10))
+# hdf5_create_matrix(fn, "data/B", data = matrix(rnorm(50), 5, 10))
+# 
+# X   <- hdf5_matrix(fn, "data/A")
+# res <- apply_function(X, datasets = c("A", "B"),
+#                       func = "CrossProd", out_group = "RESULTS")
+# hdf5_close_all()
+# unlink(fn)
+
 ## ----compression-example------------------------------------------------------
 set.seed(123)
 X_cmp <- round(matrix(rnorm(2500 * 250), nrow = 2500, ncol = 250), 2)
