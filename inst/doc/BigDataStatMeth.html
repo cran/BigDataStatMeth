@@ -10,7 +10,7 @@
 
 
 
-<meta name="date" content="2026-07-06" />
+<meta name="date" content="2026-07-18" />
 
 <title>Working with HDF5-Backed Matrices in BigDataStatMeth</title>
 
@@ -1839,7 +1839,7 @@ function toggle_visibility(id1) {
 <p class="author-name">Dolors Pelegri-Siso<span class="affil-mark">1,2,3*</span> and Juan R. Gonzalez<span class="affil-mark">1,2,3**</span></p>
 <p class="author-affiliation"><span class="affil-mark">1</span>Universitat Autonoma de Barcelona (UAB)<br><span class="affil-mark">2</span>ISGlobal, Centre for Research in Environmental Epidemiology (ISGlobal)<br><span class="affil-mark">3</span>Bioinformatics Research Group in Epidemiology (BRGE)</p>
 <p class="author-email"><span class="affil-mark">*</span><a href="mailto:dolors.pelegri@isglobal.org">dolors.pelegri@isglobal.org</a><br><span class="affil-mark">**</span><a href="mailto:juanr.gonzalez@isglobal.org">juanr.gonzalez@isglobal.org</a></p>
-<h4 class="date">2026-07-06</h4>
+<h4 class="date">2026-07-18</h4>
 <h4 class="abstract">Abstract</h4>
 <p>This vignette illustrates how to work with HDF5-backed matrices using
 the S3 interface provided by the BigDataStatMeth package. It covers
@@ -2035,7 +2035,7 @@ X_h5 &lt;- hdf5_create_matrix(
 
 X_h5
 HDF5Matrix object
-  File: /var/folders/qf/1vjbzhlx1lv7nsddk8ky3p_r0000gn/T//RtmpxDk2Mi/fileaac949f302c8.h5
+  File: /var/folders/qf/1vjbzhlx1lv7nsddk8ky3p_r0000gn/T//RtmplKD9Er/fileceff7f465c49.h5
   Path: data/X
   Dimensions: 500 x 100
   Type: 
@@ -2107,7 +2107,7 @@ cholesterol_h5 &lt;- hdf5_import(
 
 cholesterol_h5
 HDF5Matrix object
-  File: /var/folders/qf/1vjbzhlx1lv7nsddk8ky3p_r0000gn/T//RtmpxDk2Mi/fileaac937199aa5.h5
+  File: /var/folders/qf/1vjbzhlx1lv7nsddk8ky3p_r0000gn/T//RtmplKD9Er/fileceff1b22780f.h5
   Path: cholesterol/data
   Dimensions: 1000 x 10
   Type: 
@@ -2224,7 +2224,7 @@ D_h5 &lt;- A_h5 - B_h5
 
 S_h5
 HDF5Matrix object
-  File: /var/folders/qf/1vjbzhlx1lv7nsddk8ky3p_r0000gn/T//RtmpxDk2Mi/fileaac949f302c8.h5
+  File: /var/folders/qf/1vjbzhlx1lv7nsddk8ky3p_r0000gn/T//RtmplKD9Er/fileceff7f465c49.h5
   Path: OUTPUT/A_plus_B
   Dimensions: 300 x 80
   Type: 
@@ -2249,7 +2249,7 @@ while the computation is performed block-wise on the HDF5-backed data.</p>
 
 M_h5
 HDF5Matrix object
-  File: /var/folders/qf/1vjbzhlx1lv7nsddk8ky3p_r0000gn/T//RtmpxDk2Mi/fileaac949f302c8.h5
+  File: /var/folders/qf/1vjbzhlx1lv7nsddk8ky3p_r0000gn/T//RtmplKD9Er/fileceff7f465c49.h5
   Path: OUTPUT/A_x_C
   Dimensions: 300 x 40
   Type: 
@@ -2277,7 +2277,7 @@ XXt_h5 &lt;- tcrossprod(
 
 XtX_h5
 HDF5Matrix object
-  File: /var/folders/qf/1vjbzhlx1lv7nsddk8ky3p_r0000gn/T//RtmpxDk2Mi/fileaac949f302c8.h5
+  File: /var/folders/qf/1vjbzhlx1lv7nsddk8ky3p_r0000gn/T//RtmplKD9Er/fileceff7f465c49.h5
   Path: RESULTS/A_crossprod
   Dimensions: 80 x 80
   Type: 
@@ -2494,7 +2494,7 @@ pca_h5 &lt;- prcomp(
 
 pca_h5
 HDF5PCA - Principal Component Analysis (on-disk)
-  File     : /var/folders/qf/1vjbzhlx1lv7nsddk8ky3p_r0000gn/T//RtmpxDk2Mi/fileaac949f302c8.h5
+  File     : /var/folders/qf/1vjbzhlx1lv7nsddk8ky3p_r0000gn/T//RtmplKD9Er/fileceff7f465c49.h5
   PCs      : 5
   center   : TRUE  |  scale: TRUE
   sdev[1:3]: 2.1775, 1.4867, 1.3418
@@ -2761,8 +2761,8 @@ data.frame(
   file_size_MB = round(file.info(c(f0, f6))$size / 1024^2, 3)
 )
   compression elapsed file_size_MB
-1           0   0.003        4.771
-2           6   0.163        1.151</code></pre>
+1           0   0.002        4.771
+2           6   0.162        1.151</code></pre>
 <p>Formal performance comparisons should be run on the target hardware and
 with representative datasets.</p>
 </div>
@@ -2807,9 +2807,9 @@ during development.</p>
 
 hdf5_close_all()
 gc()
-          used (Mb) gc trigger (Mb) limit (Mb) max used  (Mb)
-Ncells 1602408 85.6    2788095  149         NA  2788095 149.0
-Vcells 3704289 28.3    8388608   64      36864  5271331  40.3</code></pre>
+          used (Mb) gc trigger  (Mb) limit (Mb) max used  (Mb)
+Ncells 1613032 86.2    2811018 150.2         NA  2811018 150.2
+Vcells 3720646 28.4    8388608  64.0      36864  5287688  40.4</code></pre>
 </div>
 <div id="extending-bigdatastatmeth-through-c" class="section level1" number="12">
 <h1><span class="header-section-number">12</span> Extending BigDataStatMeth through C++</h1>
@@ -2853,24 +2853,24 @@ attached base packages:
 [1] stats     graphics  grDevices utils     datasets  methods   base     
 
 other attached packages:
-[1] BigDataStatMeth_2.0.3 knitr_1.50            BiocStyle_2.36.0     
+[1] BigDataStatMeth_2.0.4 knitr_1.50            BiocStyle_2.36.0     
 
 loaded via a namespace (and not attached):
- [1] gtable_0.3.6        jsonlite_2.0.0      dplyr_1.1.4        
+ [1] gtable_0.3.6        jsonlite_2.0.0      dplyr_1.2.1        
  [4] compiler_4.5.3      BiocManager_1.30.26 tidyselect_1.2.1   
- [7] Rcpp_1.1.1          bitops_1.0-9        jquerylib_0.1.4    
-[10] scales_1.4.0        yaml_2.3.10         fastmap_1.2.0      
-[13] ggplot2_4.0.1       R6_2.6.1            labeling_0.4.3     
-[16] generics_0.1.4      MASS_7.3-65         tibble_3.3.0       
-[19] bookdown_0.43       bslib_0.9.0         pillar_1.11.1      
-[22] RColorBrewer_1.1-3  rlang_1.1.6         cachem_1.1.0       
-[25] xfun_0.52           sass_0.4.10         S7_0.2.1           
-[28] cli_3.6.5           withr_3.0.2         magrittr_2.0.4     
-[31] digest_0.6.37       grid_4.5.3          rstudioapi_0.17.1  
-[34] lifecycle_1.0.4     vctrs_0.6.5         evaluate_1.0.4     
-[37] glue_1.8.0          data.table_1.18.2.1 farver_2.1.2       
-[40] RCurl_1.98-1.18     rmarkdown_2.29      tools_4.5.3        
-[43] pkgconfig_2.0.3     htmltools_0.5.8.1  </code></pre>
+ [7] Rcpp_1.1.1          bitops_1.0-9        dichromat_2.0-0.1  
+[10] jquerylib_0.1.4     scales_1.4.0        yaml_2.3.10        
+[13] fastmap_1.2.0       ggplot2_4.0.1       R6_2.6.1           
+[16] labeling_0.4.3      generics_0.1.4      MASS_7.3-65        
+[19] tibble_3.3.1        bookdown_0.43       bslib_0.9.0        
+[22] pillar_1.11.1       RColorBrewer_1.1-3  rlang_1.3.0        
+[25] cachem_1.1.0        xfun_0.52           sass_0.4.10        
+[28] S7_0.2.1            cli_3.6.5           withr_3.0.2        
+[31] magrittr_2.0.4      digest_0.6.37       grid_4.5.3         
+[34] rstudioapi_0.17.1   lifecycle_1.0.5     vctrs_0.7.3        
+[37] evaluate_1.0.4      glue_1.8.0          data.table_1.18.2.1
+[40] farver_2.1.2        RCurl_1.98-1.18     rmarkdown_2.29     
+[43] tools_4.5.3         pkgconfig_2.0.3     htmltools_0.5.8.1  </code></pre>
 </div>
 
 
