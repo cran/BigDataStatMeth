@@ -9,26 +9,85 @@
 #ifndef BIGDATASTATMETH_SYSTEMUTILS_HPP
 #define BIGDATASTATMETH_SYSTEMUTILS_HPP
 
+#include <cmath>
+
 #if defined(__APPLE__)
 #include <mach/mach.h>
 #elif defined(__linux__)
 #include <unistd.h>
+#elif defined(_WIN32)
+// These three must be defined BEFORE <windows.h> is pulled in: they keep the
+// Windows headers minimal and stop them from defining ERROR (collides with R)
+// and min/max (collide with std::min/std::max used throughout the package).
+// Same convention HDF5 itself uses in H5private.h.
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#ifndef NOGDI
+#define NOGDI
+#endif
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
 #endif
 
 namespace BigDataStatMeth {
 
 /**
- * @brief Detects available system memory using R-compatible methods
+ * @brief Conservative fallback used whenever memory detection is unavailable
+ *        or returns an implausible value (MB).
+ */
+const size_t MEMORY_DETECTION_FALLBACK_MB = 4000;   // assume 4 GB available
+
+/**
+ * @brief Upper sanity bound for a detected "available memory" figure (MB).
+ * @details 1 PB. Anything at or above this is a detection failure, not a
+ * machine. Guards against non-finite / overflowed values reaching the block
+ * sizing heuristics as an astronomically large threshold.
+ */
+const double MEMORY_DETECTION_MAX_MB = 1024.0 * 1024.0 * 1024.0;
+
+/**
+ * @brief Validates a raw memory figure before it is used as a block-size budget
+ *
+ * @details Every platform branch of getAvailableMemoryMB() funnels its result
+ * through this guard. It rejects NaN, +/-Inf, non-positive and absurdly large
+ * values and substitutes the conservative fallback instead.
+ *
+ * This exists because of a concrete failure mode: the previous Windows branch
+ * called R's memory.size(), which is defunct since R 4.2.0 and returns Inf with
+ * a warning. Inf is not NA and not an exception, so it passed every check, and
+ * static_cast<size_t>(Inf * 0.6) is undefined behaviour -- in practice a huge
+ * value that inflated the adaptive thresholds so that Windows always chose the
+ * in-RAM preload path. Guarding the value, not just the call, is what makes the
+ * fallback actually reachable.
+ *
+ * @param mb Raw detected memory in megabytes
+ * @return size_t A finite, positive, plausible memory figure in MB
+ *
+ * @since 2.0.5
+ */
+inline size_t sanitizeAvailableMemoryMB(double mb) {
+    if (!std::isfinite(mb) || mb <= 0.0 || mb >= MEMORY_DETECTION_MAX_MB)
+        return MEMORY_DETECTION_FALLBACK_MB;
+    return static_cast<size_t>(mb);
+}
+
+/**
+ * @brief Detects available system memory using supported per-platform APIs
  * 
- * @details Safely detects available memory using R's internal functions
- * without external dependencies. Designed for CRAN/Bioconductor compatibility
- * across Windows, Linux, and macOS platforms.
+ * @details Reports the physical memory a new allocation can realistically use
+ * right now (not total installed RAM), using the documented, currently
+ * supported mechanism on each platform. No external dependencies beyond the
+ * platform C API; designed for CRAN/Bioconductor compatibility.
  * 
  * Implementation strategy:
- * - Uses R's memory.size() function when available
- * - Applies 60% utilization factor for safe memory usage
- * - Provides conservative 4GB fallback for any detection failure
- * - Zero external dependencies beyond R base
+ * - Windows : GlobalMemoryStatusEx() -> MEMORYSTATUSEX::ullAvailPhys
+ * - macOS   : host_statistics64() -> (free + inactive) pages * page size
+ * - Linux   : /proc/meminfo MemAvailable (MemFree on kernels < 3.14)
+ * - Every result passes through sanitizeAvailableMemoryMB()
+ * - Conservative 4 GB fallback for any detection failure
  * 
  * @return size_t Available memory in megabytes (MB)
  * 
@@ -36,18 +95,29 @@ namespace BigDataStatMeth {
  * @note Thread-safe and exception-safe implementation
  * @note Conservative fallback ensures compatibility on resource-constrained systems
  * 
+ * @see sanitizeAvailableMemoryMB() for the validity guard applied to every path
  * @see getOptimalBlockElements() for memory-based block size calculation
  * 
  * @since 0.99.0
+ * @since 2.0.5 Windows no longer uses the defunct R memory.size(); all paths
+ *        are validated before being returned.
  */
 
 inline size_t getAvailableMemoryMB() {
     try {
 #if defined(_WIN32)
-        Rcpp::Function memSize("memory.size");
-        Rcpp::NumericVector memResult = memSize();
-        if (memResult.size() > 0 && !Rcpp::NumericVector::is_na(memResult[0]))
-            return static_cast<size_t>(memResult[0] * 0.6);
+        // GlobalMemoryStatusEx is the supported replacement for R's
+        // memory.size(), defunct since R 4.2.0 (returns Inf with a warning).
+        // ullAvailPhys = physical RAM available to a new allocation without
+        // paging -- the Windows analogue of Linux MemAvailable and of the Mach
+        // free+inactive count used on macOS below, so the three branches are
+        // measuring the same thing and no extra utilization factor is applied.
+        MEMORYSTATUSEX status;
+        status.dwLength = sizeof(status);
+        if (GlobalMemoryStatusEx(&status) != 0) {
+            return sanitizeAvailableMemoryMB(
+                static_cast<double>(status.ullAvailPhys) / (1024.0 * 1024.0));
+        }
         
 #elif defined(__APPLE__)
         // Mach VM statistics: free + inactive pages are immediately available
@@ -60,9 +130,10 @@ inline size_t getAvailableMemoryMB() {
         if (host_statistics64(host, HOST_VM_INFO64,
                               reinterpret_cast<host_info64_t>(&vm_stats),
                               &count) == KERN_SUCCESS && page_size > 0) {
-            const size_t avail_pages = static_cast<size_t>(
-                vm_stats.free_count + vm_stats.inactive_count);
-            return (avail_pages * static_cast<size_t>(page_size)) / (1024ULL * 1024ULL);
+            const double avail_pages = static_cast<double>(vm_stats.free_count)
+                                     + static_cast<double>(vm_stats.inactive_count);
+            return sanitizeAvailableMemoryMB(
+                avail_pages * static_cast<double>(page_size) / (1024.0 * 1024.0));
         }
         
 #elif defined(__linux__)
@@ -75,7 +146,7 @@ inline size_t getAvailableMemoryMB() {
                 std::istringstream iss(line);
                 std::string key; size_t kb = 0;
                 if ((iss >> key >> kb) && kb > 0)
-                    return kb / 1024ULL;
+                    return sanitizeAvailableMemoryMB(static_cast<double>(kb) / 1024.0);
             }
         }
         // Fallback for kernels <3.14: MemFree (conservative, ignores cache)
@@ -85,12 +156,12 @@ inline size_t getAvailableMemoryMB() {
                 std::istringstream iss(line);
                 std::string key; size_t kb = 0;
                 if ((iss >> key >> kb) && kb > 0)
-                    return kb / 1024ULL;
+                    return sanitizeAvailableMemoryMB(static_cast<double>(kb) / 1024.0);
             }
         }
 #endif
     } catch(...) {}
-    return 4000;  // conservative fallback: assume 4 GB available
+    return MEMORY_DETECTION_FALLBACK_MB;  // conservative fallback: 4 GB
 }
 
 // inline size_t getAvailableMemoryMB() {

@@ -314,6 +314,18 @@ head(svd_blk_h5$d)
 dim(svd_blk_h5$u)
 dim(svd_blk_h5$v)
 
+## ----svd-threshold------------------------------------------------------------
+svd_auto_threshold()                       # element-count boundary
+svd_auto_threshold() * 8 / 2^20            # ... in MB of doubles
+attr(svd_h5, "method")                     # path actually taken
+attr(svd_h5, "exact")                      # is this an exact result?
+
+## ----svd-regime---------------------------------------------------------------
+attr(svd_blk_h5, "method")      # which algorithm ran
+attr(svd_blk_h5, "truncated")   # was per-block truncation applied?
+attr(svd_blk_h5, "nev")         # the truncation rank applied (0 = none)
+attr(svd_blk_h5, "blocking")    # k and q actually used
+
 ## ----pca-example--------------------------------------------------------------
 set.seed(124)
 

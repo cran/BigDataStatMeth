@@ -10,7 +10,7 @@
 
 
 
-<meta name="date" content="2026-07-18" />
+<meta name="date" content="2026-09-14" />
 
 <title>Working with HDF5-Backed Matrices in BigDataStatMeth</title>
 
@@ -1839,7 +1839,7 @@ function toggle_visibility(id1) {
 <p class="author-name">Dolors Pelegri-Siso<span class="affil-mark">1,2,3*</span> and Juan R. Gonzalez<span class="affil-mark">1,2,3**</span></p>
 <p class="author-affiliation"><span class="affil-mark">1</span>Universitat Autonoma de Barcelona (UAB)<br><span class="affil-mark">2</span>ISGlobal, Centre for Research in Environmental Epidemiology (ISGlobal)<br><span class="affil-mark">3</span>Bioinformatics Research Group in Epidemiology (BRGE)</p>
 <p class="author-email"><span class="affil-mark">*</span><a href="mailto:dolors.pelegri@isglobal.org">dolors.pelegri@isglobal.org</a><br><span class="affil-mark">**</span><a href="mailto:juanr.gonzalez@isglobal.org">juanr.gonzalez@isglobal.org</a></p>
-<h4 class="date">2026-07-18</h4>
+<h4 class="date">2026-09-14</h4>
 <h4 class="abstract">Abstract</h4>
 <p>This vignette illustrates how to work with HDF5-backed matrices using
 the S3 interface provided by the BigDataStatMeth package. It covers
@@ -2035,7 +2035,7 @@ X_h5 &lt;- hdf5_create_matrix(
 
 X_h5
 HDF5Matrix object
-  File: /var/folders/qf/1vjbzhlx1lv7nsddk8ky3p_r0000gn/T//RtmplKD9Er/fileceff7f465c49.h5
+  File: /var/folders/qf/1vjbzhlx1lv7nsddk8ky3p_r0000gn/T//RtmppDev9R/file36843f6a48ea.h5
   Path: data/X
   Dimensions: 500 x 100
   Type: 
@@ -2107,7 +2107,7 @@ cholesterol_h5 &lt;- hdf5_import(
 
 cholesterol_h5
 HDF5Matrix object
-  File: /var/folders/qf/1vjbzhlx1lv7nsddk8ky3p_r0000gn/T//RtmplKD9Er/fileceff1b22780f.h5
+  File: /var/folders/qf/1vjbzhlx1lv7nsddk8ky3p_r0000gn/T//RtmppDev9R/file3684687ee022.h5
   Path: cholesterol/data
   Dimensions: 1000 x 10
   Type: 
@@ -2224,7 +2224,7 @@ D_h5 &lt;- A_h5 - B_h5
 
 S_h5
 HDF5Matrix object
-  File: /var/folders/qf/1vjbzhlx1lv7nsddk8ky3p_r0000gn/T//RtmplKD9Er/fileceff7f465c49.h5
+  File: /var/folders/qf/1vjbzhlx1lv7nsddk8ky3p_r0000gn/T//RtmppDev9R/file36843f6a48ea.h5
   Path: OUTPUT/A_plus_B
   Dimensions: 300 x 80
   Type: 
@@ -2249,7 +2249,7 @@ while the computation is performed block-wise on the HDF5-backed data.</p>
 
 M_h5
 HDF5Matrix object
-  File: /var/folders/qf/1vjbzhlx1lv7nsddk8ky3p_r0000gn/T//RtmplKD9Er/fileceff7f465c49.h5
+  File: /var/folders/qf/1vjbzhlx1lv7nsddk8ky3p_r0000gn/T//RtmppDev9R/file36843f6a48ea.h5
   Path: OUTPUT/A_x_C
   Dimensions: 300 x 40
   Type: 
@@ -2277,7 +2277,7 @@ XXt_h5 &lt;- tcrossprod(
 
 XtX_h5
 HDF5Matrix object
-  File: /var/folders/qf/1vjbzhlx1lv7nsddk8ky3p_r0000gn/T//RtmplKD9Er/fileceff7f465c49.h5
+  File: /var/folders/qf/1vjbzhlx1lv7nsddk8ky3p_r0000gn/T//RtmppDev9R/file36843f6a48ea.h5
   Path: RESULTS/A_crossprod
   Dimensions: 80 x 80
   Type: 
@@ -2438,11 +2438,9 @@ local problem, but they can also increase overhead. Therefore, these
 parameters should be selected according to the matrix dimensions and the
 available hardware. The argument <code>threads</code> controls the number of
 threads used by parallel parts of the computation.</p>
-<p>The arguments <code>nu</code> and <code>nv</code> follow the same idea as in <code>base::svd()</code>:
-<code>nu</code> controls how many left singular vectors are returned, and <code>nv</code>
-controls how many right singular vectors are returned. Requesting only
-the leading components is useful when the complete set of singular
-vectors is not needed.</p>
+<p>The arguments <code>nu</code> and <code>nv</code> control how many left and right singular
+vectors are returned. Unlike <code>base::svd()</code>, however, they also change
+<em>how</em> the decomposition is computed — see the next section.</p>
 <pre class="r"><code>svd_blk_h5 &lt;- svd(
   X_svd_h5,
   nu = 5,
@@ -2459,6 +2457,105 @@ dim(svd_blk_h5$u)
 [1] 120   5
 dim(svd_blk_h5$v)
 [1] 300   5</code></pre>
+<div id="when-the-decomposition-is-exact-and-when-it-is-not" class="section level3" number="8.1.1">
+<h3><span class="header-section-number">8.1.1</span> When the decomposition is exact, and when it is not</h3>
+<p><code>svd()</code> on an <code>HDF5Matrix</code> does not always return an exact decomposition,
+and the result records which regime it is in. Two independent things
+matter, and they are not equally important.</p>
+<p><strong>The algorithm.</strong> <code>method = &quot;full&quot;</code> reads the whole matrix into RAM and
+runs an exact LAPACK SVD. <code>method = &quot;blocks&quot;</code> runs a hierarchical block
+SVD entirely on disk. <code>method = &quot;auto&quot;</code> (the default) uses <code>&quot;full&quot;</code> while
+<code>nrow * ncol</code> stays below <code>svd_auto_threshold()</code> and <code>&quot;blocks&quot;</code> at or
+above it:</p>
+<pre class="r"><code>svd_auto_threshold()                       # element-count boundary
+[1] 53687091
+svd_auto_threshold() * 8 / 2^20            # ... in MB of doubles
+[1] 409.6
+attr(svd_h5, &quot;method&quot;)                     # path actually taken
+[1] &quot;full&quot;
+attr(svd_h5, &quot;exact&quot;)                      # is this an exact result?
+[1] TRUE</code></pre>
+<p>Crossing that boundary is, by itself, not much of a numerical event: at
+full rank the block path agreed with LAPACK to relative errors around
+<code>1e-15</code> across the whole spectrum in our tests, regardless of <code>k</code> and <code>q</code>.</p>
+<p><strong>The requested rank.</strong> This is the one to watch. Asking for fewer
+singular triplets than <code>min(dim(x))</code> — through <code>nu</code>, <code>nv</code>, or
+<code>ncomponents</code>/<code>rank.</code> in <code>prcomp()</code> — truncates <em>every local block SVD</em>
+to that rank before the blocks are merged, and the truncation compounds
+across levels. On a 1600 x 200 matrix with a decaying spectrum, relative
+error in the singular values:</p>
+<div class='horizontal-scroll'><table>
+<thead>
+<tr class="header">
+<th align="right">requested rank</th>
+<th align="right">k, q</th>
+<th align="right">leading</th>
+<th align="right">trailing</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="right">200 (full)</td>
+<td align="right">2, 1</td>
+<td align="right">3e-16</td>
+<td align="right">7e-15</td>
+</tr>
+<tr class="even">
+<td align="right">200 (full)</td>
+<td align="right">4, 3</td>
+<td align="right">1e-15</td>
+<td align="right">4e-15</td>
+</tr>
+<tr class="odd">
+<td align="right">50</td>
+<td align="right">2, 1</td>
+<td align="right">7e-06</td>
+<td align="right">8e-02</td>
+</tr>
+<tr class="even">
+<td align="right">50</td>
+<td align="right">2, 3</td>
+<td align="right">5e-05</td>
+<td align="right">1e-01</td>
+</tr>
+<tr class="odd">
+<td align="right">10</td>
+<td align="right">2, 1</td>
+<td align="right">2e-03</td>
+<td align="right">1e-01</td>
+</tr>
+<tr class="even">
+<td align="right">10</td>
+<td align="right">2, 3</td>
+<td align="right">1e-02</td>
+<td align="right">2e-01</td>
+</tr>
+</tbody>
+</table></div>
+<p>The error is not confined to the tail: at rank 10 even the <em>leading</em>
+singular value was off by 1–3%. If you need a handful of accurate
+components, compute a generously oversampled rank and discard the extra
+ones — computing 50 and keeping 10 was about 250 times more accurate in
+the leading value than computing 10 directly.</p>
+<p>Both switches are silent by default, so check them on the result:</p>
+<pre class="r"><code>attr(svd_blk_h5, &quot;method&quot;)      # which algorithm ran
+[1] &quot;full&quot;
+attr(svd_blk_h5, &quot;truncated&quot;)   # was per-block truncation applied?
+[1] FALSE
+attr(svd_blk_h5, &quot;nev&quot;)         # the truncation rank applied (0 = none)
+[1] 0
+attr(svd_blk_h5, &quot;blocking&quot;)    # k and q actually used
+k q 
+4 1 </code></pre>
+<p>In this small example <code>truncated</code> is <code>FALSE</code> even though only five singular
+vectors were requested: the matrix is far below the boundary, so the exact
+LAPACK path ran on the whole matrix and the reduction to five columns happened
+afterwards, losslessly. The truncation only bites once the block algorithm is
+in play.</p>
+<p><code>svd()</code> also emits a <code>message()</code> whenever it enters either approximate
+regime; wrap the call in <code>suppressMessages()</code> in scripted pipelines that
+have already accounted for it.</p>
+</div>
 </div>
 <div id="principal-component-analysis" class="section level2" number="8.2">
 <h2><span class="header-section-number">8.2</span> Principal component analysis</h2>
@@ -2494,13 +2591,14 @@ pca_h5 &lt;- prcomp(
 
 pca_h5
 HDF5PCA - Principal Component Analysis (on-disk)
-  File     : /var/folders/qf/1vjbzhlx1lv7nsddk8ky3p_r0000gn/T//RtmplKD9Er/fileceff7f465c49.h5
+  File     : /var/folders/qf/1vjbzhlx1lv7nsddk8ky3p_r0000gn/T//RtmppDev9R/file36843f6a48ea.h5
   PCs      : 5
   center   : TRUE  |  scale: TRUE
   sdev[1:3]: 2.1775, 1.4867, 1.3418
   cumvar%  : 11.85, 17.38, 21.88 ...
   rotation : 40 x 40  [HDF5Matrix]
   x (ind.) : 180 x 40  [HDF5Matrix]
+  method   : full (exact)
 head(pca_h5$sdev)
 [1] 2.177534 1.486692 1.341799 1.305983 1.264360</code></pre>
 <p>The PCA scores are stored in the <code>x</code> component of the returned object.
@@ -2761,8 +2859,8 @@ data.frame(
   file_size_MB = round(file.info(c(f0, f6))$size / 1024^2, 3)
 )
   compression elapsed file_size_MB
-1           0   0.002        4.771
-2           6   0.162        1.151</code></pre>
+1           0   0.001        4.771
+2           6   0.180        1.151</code></pre>
 <p>Formal performance comparisons should be run on the target hardware and
 with representative datasets.</p>
 </div>
@@ -2808,8 +2906,8 @@ during development.</p>
 hdf5_close_all()
 gc()
           used (Mb) gc trigger  (Mb) limit (Mb) max used  (Mb)
-Ncells 1613032 86.2    2811018 150.2         NA  2811018 150.2
-Vcells 3720646 28.4    8388608  64.0      36864  5287688  40.4</code></pre>
+Ncells 1616318 86.4    2818858 150.6         NA  2818858 150.6
+Vcells 3728108 28.5    8388608  64.0      36864  5295354  40.5</code></pre>
 </div>
 <div id="extending-bigdatastatmeth-through-c" class="section level1" number="12">
 <h1><span class="header-section-number">12</span> Extending BigDataStatMeth through C++</h1>
@@ -2837,7 +2935,7 @@ above.</p>
 <pre class="r"><code>sessionInfo()
 R version 4.5.3 (2026-03-11)
 Platform: aarch64-apple-darwin20
-Running under: macOS Tahoe 26.5.1
+Running under: macOS Tahoe 26.6.2
 
 Matrix products: default
 BLAS:   /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/lib/libRblas.0.dylib 
@@ -2853,23 +2951,23 @@ attached base packages:
 [1] stats     graphics  grDevices utils     datasets  methods   base     
 
 other attached packages:
-[1] BigDataStatMeth_2.0.4 knitr_1.50            BiocStyle_2.36.0     
+[1] BigDataStatMeth_2.0.5 knitr_1.50            BiocStyle_2.36.0     
 
 loaded via a namespace (and not attached):
  [1] gtable_0.3.6        jsonlite_2.0.0      dplyr_1.2.1        
- [4] compiler_4.5.3      BiocManager_1.30.26 tidyselect_1.2.1   
- [7] Rcpp_1.1.1          bitops_1.0-9        dichromat_2.0-0.1  
-[10] jquerylib_0.1.4     scales_1.4.0        yaml_2.3.10        
+ [4] compiler_4.5.3      BiocManager_1.30.27 tidyselect_1.2.1   
+ [7] Rcpp_1.1.2          bitops_1.0-9        dichromat_2.0-0.1  
+[10] jquerylib_0.1.4     scales_1.4.0        yaml_2.3.12        
 [13] fastmap_1.2.0       ggplot2_4.0.1       R6_2.6.1           
 [16] labeling_0.4.3      generics_0.1.4      MASS_7.3-65        
 [19] tibble_3.3.1        bookdown_0.43       bslib_0.9.0        
 [22] pillar_1.11.1       RColorBrewer_1.1-3  rlang_1.3.0        
 [25] cachem_1.1.0        xfun_0.52           sass_0.4.10        
-[28] S7_0.2.1            cli_3.6.5           withr_3.0.2        
-[31] magrittr_2.0.4      digest_0.6.37       grid_4.5.3         
+[28] S7_0.2.1            cli_3.6.6           withr_3.0.3        
+[31] magrittr_2.0.5      digest_0.6.39       grid_4.5.3         
 [34] rstudioapi_0.17.1   lifecycle_1.0.5     vctrs_0.7.3        
-[37] evaluate_1.0.4      glue_1.8.0          data.table_1.18.2.1
-[40] farver_2.1.2        RCurl_1.98-1.18     rmarkdown_2.29     
+[37] evaluate_1.0.4      glue_1.8.1          data.table_1.18.4  
+[40] farver_2.1.2        RCurl_1.98-1.19     rmarkdown_2.29     
 [43] tools_4.5.3         pkgconfig_2.0.3     htmltools_0.5.8.1  </code></pre>
 </div>
 
