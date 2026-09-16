@@ -1,3 +1,18 @@
+# BigDataStatMeth 2.0.6
+
+## Bug fixes
+
+- Windows: reopening an HDF5 file shortly after closing it no longer fails
+  with "HDF5 file is in use by another process"; file locking is no longer
+  forced on Windows. Linux and macOS are unchanged.
+- Files are opened with a strong close degree, so an object that outlives
+  its file handle can no longer keep the file busy and block a later reopen
+  on Windows.
+- Fixed the HDF5 handle release order in `bdCreate_hdf5_matrix()` error paths.
+- `dim()` on a closed `HDF5Matrix` returns `NULL` and `length()` returns 0
+  instead of signalling an error.
+- `hdf5_close_all()` is silent when there is nothing to close.
+
 # BigDataStatMeth 2.0.5
 
 ## Bug fixes

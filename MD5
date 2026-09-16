@@ -1,7 +1,7 @@
-0375ae5f9a0495a6a076aa54bf5c8315 *DESCRIPTION
+69d08aa6d8d10ca4f16933cb2c6febfa *DESCRIPTION
 a76db2814da55e5c13aa005f8af23b5f *LICENSE
 d568a0a7d5477f9abbee5b5e5b6c3ecc *NAMESPACE
-212e2d3d5bbe712e4e334cf07b0d4142 *NEWS.md
+37d7003f47ec07059277d321f46901ab *NEWS.md
 a0989c1dcc57e1ae073941fbebc7bf41 *R/BigDataStatMeth.R
 148471009b4f0fcdcef0ac1397170603 *R/HDF5Matrix_class.R
 999cd907bf4c4e56aa9e2e3c298ff1ce *R/HDF5Matrix_constructor.R
@@ -31,7 +31,7 @@ f193808b359ea34df269eb62e70a4316 *R/RcppExports.R
 977aeeb4d3f96e4013ccd574e3c3ce62 *R/S3_arithmetic.R
 f37c15d99e8078d3e1c6c7ae39426150 *R/S3_bind.R
 c90f61cb5cb2d3e71e40ba524bc6b048 *R/S3_conversion.R
-59380972fc0668113101f6bba8b481f2 *R/S3_core.R
+5e57661a8f5290dfc09dae1fd6d86d3d *R/S3_core.R
 9420dbd4b80ac94fe786b2db5712a0e3 *R/S3_correlation.R
 e6108bc761b1b7efe464e67f896a073e *R/S3_decompositions.R
 5bc64d89748979a9205135c8ea319168 *R/S3_diagonal.R
@@ -50,7 +50,7 @@ ff3a6675de881825f24fc0532b31ef93 *R/S3_pseudoinverse.R
 713bdfb0ad28f53cbfb78472621ef77e *R/S3_subset_assignment.R
 e4bdc2cefc0c7b61692b3d5cdc84c850 *R/S3_utils.R
 f04f8f5206b5dd159a8395642bc97a78 *R/data.R
-beb2a70d82210302d6dfd88198bccc76 *R/hdf5CloseAll.R
+29f950ff3c7ad99572376e7206ad6ddb *R/hdf5CloseAll.R
 c87b960fc6c40acda4482b14f05a0d19 *R/memory_utils.R
 435fd0d9cc4904faaf486eed4dc2255e *R/options.R
 1aaee198e102df5f3e877830fc217cc2 *R/zzz.R
@@ -65,7 +65,7 @@ abe954ba9c803b242f384520194c7099 *data/miRNA.rda
 30a4acc34baf919bc060267721de65e0 *inst/cc
 73aa23e3c2058fe3d35bb88090d5eba4 *inst/doc/BigDataStatMeth.R
 e95e84e0bf3e86aa519f6487f4320710 *inst/doc/BigDataStatMeth.Rmd
-478b7545ab66ccf6944da2e49098209b *inst/doc/BigDataStatMeth.html
+6b1e61ffe6e192c9e24dc7fcda5cdbbb *inst/doc/BigDataStatMeth.html
 1e9a874ab17fd18b0d7852cd55318cb0 *inst/extdata/colesterol.csv
 ec695afbd50736a776df2dbc5e26a7d0 *inst/include/BigDataStatMeth.hpp
 c1ee227f3ae984057aec6d3ea6cfe2fe *inst/include/Spectra/DavidsonSymEigsSolver.h
@@ -157,7 +157,7 @@ c11d96fa31c4e22eda4674894936daaa *inst/include/hdf5Utilities/hdf5Datasets.hpp
 999542f1462dacbc92631cfd5e1bcd4e *inst/include/hdf5Utilities/hdf5Diagonal.hpp
 62edb2b28d99dd38f58701bd0e50e896 *inst/include/hdf5Utilities/hdf5DiagonalMethods.hpp
 3c03c0e3626a2614579bfe8aa5de77ba *inst/include/hdf5Utilities/hdf5Dims.hpp
-e4abf48ebd0b2533c1e483e8aa64c369 *inst/include/hdf5Utilities/hdf5Files.hpp
+914cf94bb995add55e9de91a0281583a *inst/include/hdf5Utilities/hdf5Files.hpp
 f46b18965c5e5baedc89e27d1a865099 *inst/include/hdf5Utilities/hdf5Groups.hpp
 a3ac6587cece3e7226bc11fe4f6b0bbb *inst/include/hdf5Utilities/hdf5ImportFiles.hpp
 30583c919fc9ec5b61d3f68eadd2cb5f *inst/include/hdf5Utilities/hdf5ImputeData.hpp
@@ -218,7 +218,7 @@ ef63db938dc468df2a666d0104935897 *man/colSums.Rd
 0087267561c25c40a44ec699e5a98ff8 *man/diag.Rd
 248562feab34ca89e5050937050ca21c *man/diag_op.Rd
 7140f1e62f91368ef73687a03a373899 *man/diag_scale.Rd
-7d0ba2e14127d790ccdd430b60dc0b1b *man/dim.HDF5Matrix.Rd
+08f6274d8e7eec710f2c3a8095c4e03a *man/dim.HDF5Matrix.Rd
 53b90b9c9584025a78bfb5f07b9b9dca *man/dimnames-set-.HDF5Matrix.Rd
 af7a9fae23d062ecefb2bb3b5386c165 *man/dimnames.HDF5Matrix.Rd
 ab65ee0fc06efc7e64424f0427f10351 *man/dot-get_option.Rd
@@ -325,7 +325,7 @@ e36d9e8cc5e425e87f145d799302d215 *man/system_info.Rd
 7b5b913c47241928e68fdf6cb5694abe *src/RcppExports.cpp
 03bd8e19d0455c7c311f639bc83dd543 *src/hdf5_applyFunction.cpp
 4e137ab15f91ccc043f3468460e821c2 *src/hdf5_createGroup.cpp
-ae77be4f0af3f0adb289d07415127906 *src/hdf5_createMatrix.cpp
+9e4f1ec62abd1b6f4b90c702bb81cdc8 *src/hdf5_createMatrix.cpp
 9de43d1252a772c2511f270a16ede418 *src/hdf5_getDatasetList.cpp
 cdbf67817bfe58893575371db0ef2e95 *src/hdf5_importFile.cpp
 4b686099fc718947d61790deb4928f7c *src/hdf5_moveDataset.cpp
@@ -349,7 +349,7 @@ fe142e2a63f90fb30f4d26eaf8464daa *src/hdf5_r6_qr.cpp
 9f34028d2519b1963048d3c387339324 *src/hdf5_r6_split.cpp
 9ec4c7c0c5ebf26be13b7535f0b30460 *src/hdf5_r6_subset.cpp
 84e09931cb13d21f4ce375d5a78cc9a0 *src/hdf5_r6_svd.cpp
-b0f76a661f60d585c59de235ba2d3ca6 *src/hdf5_r6_write.cpp
+3933a5c23e67048545f393e0138ecc9f *src/hdf5_r6_write.cpp
 66eb147def6b37c34a433b51fda3d09a *src/hdf5_reduceDataset.cpp
 7f1fc16be4ef441aa275e3b99c243774 *src/hdf5_systemInfo.cpp
 dad6e94e7a2c28359345f41f4a16c6bf *src/hdf5_writeDimnames.cpp
